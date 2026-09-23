@@ -18,6 +18,7 @@ add_executable(game
     src/Renderer.cpp
     src/Game.cpp
     src/Terminal.cpp
+    src/Benchmark.cpp
 )
 
 target_include_directories(game PRIVATE include)

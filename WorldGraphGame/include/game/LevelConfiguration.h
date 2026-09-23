@@ -13,7 +13,7 @@ struct LevelConfiguration {
     float activationDistance = 10.0f;
     int maximumActiveAreas = 4;
 
-    int enemiesPerArea = 50;
+    int enemiesPerArea = 500;
     int healthItemsPerArea = 2;
     int ammunitionItemsPerArea = 2;
 

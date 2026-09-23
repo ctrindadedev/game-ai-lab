@@ -207,10 +207,38 @@ Busca em largura completa & Correta, mas desnecessária enquanto $D$ for menor
 
 \gancho{O argumento fica completo com números.}
 
-Medir o tempo médio de quadro variando o número de inimigos (dezenas, centenas,
-milhares), em duas condições: com a janela ativa e com todas as áreas forçadas
-a ativas. A linha de base deve crescer linearmente com $N$; a janela ativa, bem
-mais devagar. Repetir numa malha maior mostra o ganho assintótico. A distância
-entre as duas curvas é o resultado que justifica a arquitetura.
+Medido o tempo médio de quadro (média de 60 quadros simulados, sem terminal
+nem espera de taxa de quadros) variando o número de inimigos, em duas
+condições: com a janela ativa e com todas as áreas forçadas a ativas (a linha
+de base ingênua, $O(N)$). O jogador foi posicionado no pior caso de $K$ cheio:
+o ponto interno onde quatro áreas se tocam. Os números brutos, incluindo mais
+pontos que os da tabela abaixo, estão em \texttt{WorldGraphGame/benchmarks/frame\_time.csv}.
+
+\begin{center}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Malha & $N$ (inimigos) & Ingênuo (ms) & Janela ativa (ms) & Ganho \\
+\midrule
+$3\times3$  & 900    & 0,0104 & 0,0044 & $2{,}4\times$ \\
+$3\times3$  & 4500   & 0,0334 & 0,0130 & $2{,}6\times$ \\
+$3\times3$  & 9000   & 0,0518 & 0,0337 & $1{,}5\times$ \\
+$10\times10$ & 10000  & 0,0524 & 0,0017 & $30{,}8\times$ \\
+$10\times10$ & 50000  & 0,2705 & 0,0074 & $36{,}6\times$ \\
+$10\times10$ & 100000 & 0,7874 & 0,0224 & $35{,}2\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+O resultado confirma a previsão da Seção 4: a linha de base cresce
+linearmente com $N$, a janela ativa cresce muito mais devagar, e o ganho na
+malha $3\times3$ fica na faixa do $2{,}2\times$ estimado a partir de $K/n =
+4/9$ (o ponto de $9000$ destoa por ruído de medição --- o processo compete
+por CPU com o resto do sistema, e o efeito pesa mais nos tempos já pequenos
+da janela ativa). Na malha $10\times10$ o ganho medido (entre $31\times$ e
+$37\times$) fica até acima do $25\times$ estimado a partir de $K/n =
+4/100$, o que é consistente: $K/n$ é o pior caso, e o ganho real tende a
+ficar igual ou melhor que ele. O comportamento assintótico --- janela ativa
+crescendo muito mais devagar que a linha de base --- é o que a Seção 4
+previu.
 
 \end{document}

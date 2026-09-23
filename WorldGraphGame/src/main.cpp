@@ -13,9 +13,6 @@
 
 namespace {
 
-// Varre número de inimigos (dezenas a milhares) em duas malhas, com e sem
-// janela ativa, e grava o resultado em CSV -- é a medição que justifica a
-// arquitetura (ver PLAN.md, item 5, e a seção 7 de justificativa_algoritmo.tex).
 void runBenchmarkSuite(const std::string& outputPath) {
     struct MeshSpec {
         int width;

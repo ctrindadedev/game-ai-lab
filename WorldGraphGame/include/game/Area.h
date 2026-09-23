@@ -35,9 +35,6 @@ public:
     // Atualiza todos os inimigos vivos da área; chamado apenas para áreas ativas.
     void updateCharacters(float deltaTime, Player& player);
 
-    // Testa a colisão do jogador com os itens e aplica os efeitos deles.
-    // ammunitionItemRadius é o alcance do dano em área da munição, contido
-    // sempre a esta área (ver Decisões, em PLAN.md).
     void collectItems(Player& player, float ammunitionItemRadius);
 
     // Remove os inimigos mortos e os itens já coletados.

@@ -3,8 +3,6 @@
 Viewport::Viewport(Vector2 center, Vector2 size) : center_(center), size_(size) {}
 
 void Viewport::follow(const Vector2& target, float /*deltaTime*/, float smoothing) {
-    // O laço do jogo usa passo fixo (sempre 1/60 s), então smoothing não
-    // precisa de correção por deltaTime: ver PLAN.md, seção 6.
     center_ = lerp(center_, target, smoothing);
 }
 

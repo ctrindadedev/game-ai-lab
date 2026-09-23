@@ -15,9 +15,6 @@ BenchmarkResult runBenchmark(const LevelConfiguration& configuration, bool dynam
 
     Player player({0.0f, 0.0f}, configuration.playerHealth);
     const Rectangle& bounds = world.bounds();
-    // O pior caso de K cheio não é o canto externo do mundo (lá só há uma
-    // área por perto): é o ponto interno onde quatro áreas se tocam, perto
-    // do canto superior-direito da área (0,0). Ver PLAN.md, "Custo".
     const Vector2 cornerPosition{bounds.left() + configuration.areaWidth - 0.5f,
                                  bounds.bottom() + configuration.areaHeight - 0.5f};
     player.setPosition(cornerPosition);

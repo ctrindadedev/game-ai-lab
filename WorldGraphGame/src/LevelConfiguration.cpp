@@ -114,9 +114,6 @@ LevelConfiguration generateRandomLevelConfiguration(std::uint32_t randomSeed) {
     configuration.areaWidth = areaDimension(randomEngine);
     configuration.areaHeight = areaDimension(randomEngine);
 
-    // A validade do percurso de profundidade 1 exige activationDistance
-    // menor que a menor dimensão da área (ver PLAN.md, "Profundidade 1 tem
-    // limite"); a faixa sorteada fica com folga desse limite.
     const float smallestAreaDimension = std::min(configuration.areaWidth, configuration.areaHeight);
     std::uniform_real_distribution<float> activation(5.0f, smallestAreaDimension * 0.4f);
     configuration.activationDistance = activation(randomEngine);

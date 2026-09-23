@@ -53,8 +53,5 @@ private:
     Rectangle bounds_{};
     std::vector<Node> nodes_;
     std::vector<int> activeAreas_;
-    // Áreas carregadas, inativas, aguardando o limiar de descarte
-    // (areaUnloadDelay). Tamanho limitado às áreas visitadas recentemente,
-    // não ao total do mundo -- ver PLAN.md, item 7.
     std::vector<int> pendingUnload_;
 };

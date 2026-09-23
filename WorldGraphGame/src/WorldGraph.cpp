@@ -172,11 +172,6 @@ void WorldGraph::updateActiveAreas(const Vector2& playerPosition,
 
     activeAreas_ = std::move(candidates);
 
-    // Andar de um lado para o outro na fronteira não pode virar carga e
-    // descarga constantes (ver PLAN.md, "Duas armadilhas"): só descarrega
-    // depois de areaUnloadDelay seguidos fora do conjunto ativo. O custo
-    // deste laço é o tamanho de pendingUnload_ -- áreas visitadas há pouco
-    // -- não o total de áreas do mundo.
     for (auto it = pendingUnload_.begin(); it != pendingUnload_.end();) {
         Node& node = nodes_[static_cast<std::size_t>(*it)];
         node.inactiveElapsed += deltaTime;

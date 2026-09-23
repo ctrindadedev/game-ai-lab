@@ -129,7 +129,7 @@ void Game::update(float deltaTime) {
     for (int areaIdentifier : world_.activeAreas()) {
         if (Area* area = world_.area(areaIdentifier)) {
             area->updateCharacters(deltaTime, player_);
-            area->collectItems(player_);
+            area->collectItems(player_, configuration_.ammunitionItemRadius);
             area->removeDeadEntities();
         }
     }

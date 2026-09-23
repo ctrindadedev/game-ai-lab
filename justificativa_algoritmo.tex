@@ -1,0 +1,216 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{wrapfig}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\definecolor{destaque}{HTML}{1F4E79}
+\setlist{nosep, leftmargin=*}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+% Frase de abertura de cada seção: conecta com a anterior.
+\newcommand{\gancho}[1]{\textcolor{destaque}{\textit{#1}}\par}
+
+\floatname{algorithm}{Algoritmo}
+\algrenewcommand\algorithmicrequire{\textbf{Entrada:}}
+\algrenewcommand\algorithmicensure{\textbf{Saída:}}
+\algrenewcommand\algorithmicfor{\textbf{para cada}}
+\algrenewcommand\algorithmicdo{\textbf{faça}}
+\algrenewcommand\algorithmicif{\textbf{se}}
+\algrenewcommand\algorithmicthen{\textbf{então}}
+\algrenewcommand\algorithmicend{\textbf{fim}}
+
+\title{\textbf{Ativação dinâmica de áreas por grafo}\\[0.3em]
+  \large Justificativa do algoritmo}
+\author{Caio Trindade e Luisa Ferreira\\
+  \small Inteligência Artificial para Jogos I --- Representação do Mundo}
+\date{Setembro de 2026}
+
+\begin{document}
+\maketitle
+
+\section{O problema}
+
+\gancho{Por que não dá para simplesmente atualizar tudo de uma vez?}
+
+O nível tem 9 áreas povoadas por inimigos, e os testes de balanceamento pedem
+chegar a milhares deles. Atualizar todos a cada quadro custa $O(N)$, com $N$ o
+total de inimigos, e $N$ cresce com o tamanho do mundo. Mas o jogador só
+interage com o que está perto: atualizar um inimigo do outro lado do mapa é
+trabalho que ninguém observa. É a pergunta que a aula faz sobre malhas
+\emph{"o que é preciso atualizar a cada iteração do jogo?"} e a resposta é:
+só a vizinhança do jogador.
+
+\section{A modelagem: o mundo como grafo}
+
+\gancho{Vizinhança é uma relação entre lugares; a estrutura natural para
+relações é um grafo.}
+
+\begin{wrapfigure}{r}{0.30\textwidth}
+  \vspace{-1.2em}
+  \centering
+  \begin{tikzpicture}[
+      area/.style={circle, draw=destaque, thick, minimum size=6mm,
+                   inner sep=0pt, font=\small},
+      scale=0.95]
+    \foreach \i in {0,...,8} {
+      \pgfmathtruncatemacro{\x}{mod(\i,3)}
+      \pgfmathtruncatemacro{\y}{div(\i,3)}
+      \node[area] (n\i) at (\x*1.3,\y*1.3) {\i};
+    }
+    \foreach \a/\b in {0/1,1/2,3/4,4/5,6/7,7/8,0/3,3/6,1/4,4/7,2/5,5/8}
+      \draw[thick] (n\a) -- (n\b);
+    \foreach \a/\b in {0/4,1/5,3/7,4/8,1/3,2/4,4/6,5/7}
+      \draw[thin, gray] (n\a) -- (n\b);
+  \end{tikzpicture}
+  \par\vspace{0.3em}{\small Malha $3\times3$ com diagonais (cinza): grau 3 nos cantos, 5 nas bordas, 8 no centro.\par}
+  \vspace{-1.5em}
+\end{wrapfigure}
+
+O mundo é um grafo não dirigido $G = (V, A)$. Cada \textbf{vértice} é uma área:
+uma região retangular com o próprio conteúdo (inimigos, itens) e o próprio
+estado (ativa ou inativa). Cada \textbf{aresta} liga duas áreas que se tocam,
+por um lado ou por um canto: são as áreas entre as quais se pode passar
+diretamente. É a subdivisão do mundo vista como grafo, como na
+aula: cada região vira um nó, e regiões vizinhas são ligadas.
+
+\textbf{Representação: lista de adjacência.} A única operação que o algoritmo
+faz sobre o grafo é \emph{visitar os vizinhos de um vértice}, e é exatamente
+essa a operação que a lista de adjacência torna eficiente: custa $O(d)$, com
+$d$ o grau do vértice. Numa matriz de adjacência a mesma consulta varre uma
+linha inteira, $O(|V|)$, e a matriz ocupa $O(|V|^2)$ para um grafo esparso.
+
+\textbf{Por que grafo e não só a malha.} Na malha, os vizinhos são
+\emph{calculados} a partir da posição; no grafo, são um \emph{dado
+armazenado}. Isso desacopla a topologia da geometria: uma parede entre duas
+áreas vizinhas, um corredor ou portal ligando áreas distantes, áreas de tamanhos
+diferentes. A malha regular vira um caso particular do grafo. Hoje o grafo é
+gerado como malha, mas mudar a topologia significa mudar só a função que o
+constrói; o algoritmo e a análise abaixo continuam valendo.
+
+\section{O algoritmo: a janela ativa}
+
+\gancho{Com o mundo como grafo, o que o jogo faz a cada quadro?}
+
+O estado mantido é o conjunto de \textbf{áreas ativas}, com no máximo $K = 4$
+elementos. A cada quadro ele é recalculado a partir da posição do jogador:
+
+\begin{algorithm}[h]
+\caption{Atualização das áreas ativas}
+\begin{algorithmic}[1]
+\Require posição $P$ do jogador, grafo $G$, limiar $D$, limite $K$
+\State $a \gets$ área que contém $P$ \Comment{se não houver, nada muda}
+\State $C \gets \{a\}$
+\For{vizinho $v$ de $a$ em $G$} \Comment{percurso local: profundidade 1}
+  \If{$\operatorname{dist}(P, \text{limites}(v)) < D$} $C \gets C \cup \{v\}$ \EndIf
+\EndFor
+\If{$|C| > K$} manter as $K$ mais próximas de $P$, sempre com $a$ \EndIf
+\State desativar as áreas que saíram de $C$; carregar e ativar as que entraram
+\end{algorithmic}
+\end{algorithm}
+
+Depois disso, só os inimigos das áreas ativas são atualizados (perseguição e
+dano); as demais ficam paradas. O passo central é a linha 3: uma \textbf{busca
+em largura limitada à profundidade 1} a partir da área atual. Ela visita o nó e
+seus vizinhos imediatos e para, sem nunca percorrer o grafo inteiro.
+
+\section{O custo}
+
+\gancho{Por que isso escala com o tamanho do mundo?}
+
+Sejam $n$ o número de áreas, $d$ o grau máximo (8 na malha), $N$ o total de
+inimigos e $K$ o limite de áreas ativas.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Etapa & Ingênuo & Janela ativa \\
+\midrule
+Decidir o que atualizar & --- & $O(d \log d)$, constante em $n$ \\
+Atualizar inimigos & $O(N)$ & $O(K \cdot N/n)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A simulação cai para a fração $K/n$ do total: $4/9 \approx 44\%$ na malha
+$3\times3$, $4\%$ numa $10\times10$, $0{,}4\%$ numa $32\times32$. Na $3\times3$
+o ganho é modesto (cerca de $2{,}2\times$), porque quatro áreas já são quase
+metade do mundo; \textbf{o ganho é assintótico}, cresce com a malha. E $K$
+cheio é o pior caso: longe das divisas só a área atual fica ativa.
+
+\section{Correção e limites}
+
+\gancho{Barato só vale se estiver certo. O que precisa valer ao fim de todo
+quadro?}
+
+\begin{enumerate}
+  \item A área que contém o jogador está sempre ativa.
+  \item Há no máximo $K$ áreas ativas.
+  \item Toda área ativa é a atual ou vizinha dela no grafo.
+  \item Nenhuma área ativa está descarregada da memória.
+  \item Nenhum inimigo de área inativa se moveu.
+\end{enumerate}
+
+O invariante 3 é o que liga o algoritmo ao grafo e garante que o custo é local.
+É também o que exige as \textbf{arestas diagonais}: perto de um canto, o
+jogador está perto de três áreas além da sua, e uma delas só toca a área atual
+pelo canto. Sem a aresta diagonal ela ficaria a dois saltos, fora do alcance da
+profundidade 1, e o máximo de 4 áreas ativas do enunciado --- que é exatamente
+esse caso do canto --- nunca aconteceria. A condição que resta é: \textbf{o limiar $D$ deve ser menor que a menor
+dimensão de uma área}. Assim, para chegar perto de uma área a duas arestas de
+distância, o jogador precisa atravessar a do meio, que nesse momento já é a
+atual; a profundidade 1 é exata, não uma aproximação. Se $D$ passar disso, o
+percurso precisa virar uma busca em largura completa, com fila e visitados,
+cortada por distância.
+
+O limiar também evita \textbf{oscilação na fronteira}: se a ativação dependesse
+só de ``estar dentro da área'', andar sobre uma divisa ligaria e desligaria a
+vizinha a cada quadro. Com $D$, a área vizinha acorda antes de o jogador chegar.
+Pelo mesmo motivo, liberar uma área da memória precisa de um atraso.
+
+\section{Alternativas descartadas}
+
+\gancho{Por que não outra estrutura vista em aula?}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Abordagem & Por que não \\
+\midrule
+Atualizar tudo & $O(N)$ por quadro, justamente o que se quer evitar. \\
+Distância a cada inimigo & Ainda $O(N)$: medir a distância custa o mesmo que atualizar. \\
+Quadtree & Responde bem \emph{o que está perto} (consulta geométrica). O problema
+  pergunta \emph{o que está conectado}; as duas coincidem num mundo aberto, mas
+  deixam de coincidir com paredes ou passagens. \\
+Matriz de adjacência & Listar vizinhos custa $O(n)$ e o espaço é $O(n^2)$ para
+  um grafo esparso. \\
+Busca em largura completa & Correta, mas desnecessária enquanto $D$ for menor
+  que a área: profundidade 1 basta. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Como demonstrar}
+
+\gancho{O argumento fica completo com números.}
+
+Medir o tempo médio de quadro variando o número de inimigos (dezenas, centenas,
+milhares), em duas condições: com a janela ativa e com todas as áreas forçadas
+a ativas. A linha de base deve crescer linearmente com $N$; a janela ativa, bem
+mais devagar. Repetir numa malha maior mostra o ganho assintótico. A distância
+entre as duas curvas é o resultado que justifica a arquitetura.
+
+\end{document}

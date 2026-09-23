@@ -5,7 +5,12 @@
 Area::Area(int identifier, const Rectangle& bounds)
     : identifier_(identifier), bounds_(bounds) {}
 
-void Area::updateCharacters(float /*deltaTime*/, Player& /*player*/) {
+void Area::updateCharacters(float deltaTime, Player& player) {
+    for (NonPlayerCharacter& character : characters_) {
+        if (!character.isDead()) {
+            character.update(deltaTime, player);
+        }
+    }
 }
 
 void Area::collectItems(Player& /*player*/) {

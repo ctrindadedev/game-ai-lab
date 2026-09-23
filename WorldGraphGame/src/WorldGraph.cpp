@@ -82,9 +82,23 @@ void WorldGraph::populate(Area& area) const {
     std::uniform_real_distribution<float> vertical(bounds.bottom(), bounds.top());
     const auto randomPosition = [&] { return Vector2{horizontal(randomEngine), vertical(randomEngine)}; };
 
+    // O jogador nasce no centro do mundo; evita que um inimigo nasça
+    // encostado nele. Poucas tentativas bastam, e aceitar a última é
+    // preferível a travar a geração do nível.
+    const Vector2 playerSpawnPoint = bounds_.center();
+    const auto randomEnemyPosition = [&] {
+        Vector2 candidate = randomPosition();
+        for (int attempt = 0; attempt < 20 &&
+                              distance(candidate, playerSpawnPoint) < configuration_.minimumEnemySpawnDistance;
+             ++attempt) {
+            candidate = randomPosition();
+        }
+        return candidate;
+    };
+
     area.characters().reserve(static_cast<std::size_t>(configuration_.enemiesPerArea));
     for (int count = 0; count < configuration_.enemiesPerArea; ++count) {
-        area.characters().emplace_back(randomPosition(), configuration_.enemyHealth,
+        area.characters().emplace_back(randomEnemyPosition(), configuration_.enemyHealth,
                                        configuration_.enemySpeed,
                                        configuration_.enemyDamagePerSecond);
     }

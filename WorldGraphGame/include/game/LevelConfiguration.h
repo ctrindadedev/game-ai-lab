@@ -26,6 +26,10 @@ struct LevelConfiguration {
     int ammunitionItemDamage = 40;
     float ammunitionItemRadius = 8.0f;
 
+    // Distância mínima entre um inimigo recém-criado e o ponto de nascimento
+    // do jogador (o centro do mundo), para que ele não nasça já encostado.
+    float minimumEnemySpawnDistance = 5.0f;
+
     float survivalTime = 120.0f;
 
     std::uint32_t randomSeed = 42;

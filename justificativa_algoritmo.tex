@@ -179,7 +179,11 @@ cortada por distância.
 O limiar também evita \textbf{oscilação na fronteira}: se a ativação dependesse
 só de ``estar dentro da área'', andar sobre uma divisa ligaria e desligaria a
 vizinha a cada quadro. Com $D$, a área vizinha acorda antes de o jogador chegar.
-Pelo mesmo motivo, liberar uma área da memória precisa de um atraso.
+Pelo mesmo motivo, liberar uma área da memória precisa de um atraso: a
+implementação usa 30 segundos inativa antes de descarregar (\texttt{areaUnloadDelay}),
+e o descarte é destrutivo --- inimigos mortos e itens coletados voltam ao
+estado inicial se a área for recarregada, já que nenhum resumo do progresso é
+guardado.
 
 \section{Alternativas descartadas}
 

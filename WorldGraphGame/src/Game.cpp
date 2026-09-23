@@ -35,7 +35,7 @@ Game::Game(const LevelConfiguration& configuration)
     const Vector2 start = world_.bounds().center();
     player_.setPosition(start);
     viewport_.setCenter(start);
-    world_.updateActiveAreas(start, configuration_);
+    world_.updateActiveAreas(start, configuration_, 0.0f);
 }
 
 void Game::run() {
@@ -125,7 +125,7 @@ void Game::update(float deltaTime) {
     player_.update(deltaTime);
     player_.setPosition(world_.bounds().clamp(player_.position()));
 
-    world_.updateActiveAreas(player_.position(), configuration_);
+    world_.updateActiveAreas(player_.position(), configuration_, deltaTime);
     for (int areaIdentifier : world_.activeAreas()) {
         if (Area* area = world_.area(areaIdentifier)) {
             area->updateCharacters(deltaTime, player_);

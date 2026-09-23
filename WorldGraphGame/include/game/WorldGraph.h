@@ -32,7 +32,7 @@ public:
     std::optional<int> areaAt(const Vector2& position) const;
 
     void updateActiveAreas(const Vector2& playerPosition,
-                           const LevelConfiguration& configuration);
+                           const LevelConfiguration& configuration, float deltaTime);
 
     const std::vector<int>& activeAreas() const { return activeAreas_; }
 
@@ -42,6 +42,9 @@ private:
         Rectangle bounds{};
         std::vector<int> neighbors;
         std::unique_ptr<Area> area;
+        // Tempo acumulado desde que a área saiu do conjunto ativo; só é
+        // significativo enquanto a área estiver em pendingUnload_.
+        float inactiveElapsed = 0.0f;
     };
 
     void populate(Area& area) const;
@@ -50,4 +53,8 @@ private:
     Rectangle bounds_{};
     std::vector<Node> nodes_;
     std::vector<int> activeAreas_;
+    // Áreas carregadas, inativas, aguardando o limiar de descarte
+    // (areaUnloadDelay). Tamanho limitado às áreas visitadas recentemente,
+    // não ao total do mundo -- ver PLAN.md, item 7.
+    std::vector<int> pendingUnload_;
 };

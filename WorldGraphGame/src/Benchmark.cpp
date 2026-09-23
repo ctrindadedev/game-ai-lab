@@ -26,7 +26,7 @@ BenchmarkResult runBenchmark(const LevelConfiguration& configuration, bool dynam
 
     std::vector<int> allAreas;
     if (dynamicActivation) {
-        world.updateActiveAreas(cornerPosition, configuration);
+        world.updateActiveAreas(cornerPosition, configuration, 0.0f);
     } else {
         allAreas.reserve(world.areaCount());
         for (std::size_t identifier = 0; identifier < world.areaCount(); ++identifier) {
@@ -39,7 +39,7 @@ BenchmarkResult runBenchmark(const LevelConfiguration& configuration, bool dynam
     const auto start = Clock::now();
     for (int frame = 0; frame < frameCount; ++frame) {
         if (dynamicActivation) {
-            world.updateActiveAreas(cornerPosition, configuration);
+            world.updateActiveAreas(cornerPosition, configuration, deltaTime);
         }
         const std::vector<int>& areasToUpdate = dynamicActivation ? world.activeAreas() : allAreas;
         for (int areaIdentifier : areasToUpdate) {

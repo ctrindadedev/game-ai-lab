@@ -13,6 +13,11 @@ struct LevelConfiguration {
     float activationDistance = 10.0f;
     int maximumActiveAreas = 4;
 
+    // Segundos que uma área fica carregada e inativa antes de ser
+    // descarregada da memória; evita descarregar e recarregar a cada quadro
+    // de vaivém na fronteira.
+    float areaUnloadDelay = 30.0f;
+
     int enemiesPerArea = 500;
     int healthItemsPerArea = 2;
     int ammunitionItemsPerArea = 2;

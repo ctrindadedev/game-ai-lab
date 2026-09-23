@@ -66,7 +66,3 @@ com o valor padrão de `LevelConfiguration`.
 As peças principais são `WorldGraph` (grafo de áreas e controle de quais
 estão ativas), `Area` (inimigos e itens de uma área), `Game` (laço principal
 com passo fixo de 1/60 s) e `Renderer` (desenho no terminal).
-
-## O que falta
-
-Testes automatizados.

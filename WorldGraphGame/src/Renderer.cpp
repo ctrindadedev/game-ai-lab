@@ -1,6 +1,7 @@
 #include "game/Renderer.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -33,6 +34,50 @@ void Renderer::draw(const WorldGraph& world, const Viewport& viewport, const Pla
     };
 
     const Rectangle visible = viewport.worldBounds();
+
+    // Fundo fixo no mundo: bordas das áreas e uma grade de pontos. Sem isso a
+    // câmera, que segue o jogador, deixa o '@' parado no centro e não dá para
+    // ver o deslocamento.
+    constexpr float dotSpacing = 5.0f;
+    const Rectangle& worldBounds = world.bounds();
+    const Vector2 areaSize = world.areaCount() > 0 ? world.boundsOf(0).size : worldBounds.size;
+
+    // Há uma linha (múltiplo de spacing, contado a partir de origin) no intervalo (start, end]?
+    const auto crossesLine = [](float start, float end, float origin, float spacing) {
+        return std::floor((end - origin) / spacing) != std::floor((start - origin) / spacing);
+    };
+
+    for (int row = 0; row < gridRows; ++row) {
+        const float cellBottom = visible.bottom() + static_cast<float>(gridRows - 1 - row) * cellHeight;
+        for (int column = 0; column < columns_; ++column) {
+            const float cellLeft = visible.left() + static_cast<float>(column) * cellWidth;
+            const Rectangle cell{{cellLeft, cellBottom}, {cellWidth, cellHeight}};
+            if (!cell.intersects(worldBounds)) {
+                continue;
+            }
+
+            const float cellRight = cell.right();
+            const float cellTop = cell.top();
+            const bool verticalBorder =
+                crossesLine(cellLeft, cellRight, worldBounds.left(), areaSize.x);
+            const bool horizontalBorder =
+                crossesLine(cellBottom, cellTop, worldBounds.bottom(), areaSize.y);
+
+            char glyph = ' ';
+            if (verticalBorder && horizontalBorder) {
+                glyph = '+';
+            } else if (verticalBorder) {
+                glyph = '|';
+            } else if (horizontalBorder) {
+                glyph = '-';
+            } else if (crossesLine(cellLeft, cellRight, worldBounds.left(), dotSpacing) &&
+                       crossesLine(cellBottom, cellTop, worldBounds.bottom(), dotSpacing)) {
+                glyph = '.';
+            }
+            grid[static_cast<std::size_t>(row * columns_ + column)] = glyph;
+        }
+    }
+
     for (int areaIdentifier : world.activeAreas()) {
         const Area* area = world.area(areaIdentifier);
         if (!area || !area->bounds().intersects(visible)) {

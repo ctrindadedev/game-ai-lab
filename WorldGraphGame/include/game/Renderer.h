@@ -12,7 +12,7 @@ public:
     Renderer() = default;
     Renderer(int columns, int rows);
 
-    // Monta o quadro (jogador, inimigos, itens) num buffer interno; não
+    // Monta o quadro (grade de fundo, jogador, inimigos, itens) num buffer interno; não
     // imprime nada ainda.
     void draw(const WorldGraph& world, const Viewport& viewport, const Player& player);
 

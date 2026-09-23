@@ -1,0 +1,29 @@
+{
+  "gridWidth": 3,
+  "gridHeight": 3,
+  "areaWidth": 40.0,
+  "areaHeight": 40.0,
+
+  "activationDistance": 10.0,
+  "maximumActiveAreas": 4,
+
+  "enemiesPerArea": 50,
+  "healthItemsPerArea": 2,
+  "ammunitionItemsPerArea": 2,
+
+  "playerHealth": 100,
+  "playerSpeed": 8.0,
+  "enemyHealth": 30,
+  "enemySpeed": 3.0,
+  "enemyDamagePerSecond": 10,
+  "healthItemValue": 25,
+  "ammunitionItemDamage": 40,
+  "ammunitionItemRadius": 8.0,
+
+  "survivalTime": 120.0,
+  "randomSeed": 42,
+
+  "viewportWidth": 40.0,
+  "viewportHeight": 20.0,
+  "viewportSmoothing": 0.15
+}

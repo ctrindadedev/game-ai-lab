@@ -1,61 +1,72 @@
-# Game ai lab
+### WorldGraphGame
 
-Jogo 2D top-down em C++17 onde o mundo é representado por um **grafo de áreas**:
-cada área da malha é um nó, as arestas são adjacências e apenas as áreas
-próximas do jogador (no máximo quatro) ficam ativas e são atualizadas a cada quadro.
+<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;">
+ <img align="center" alt="C++" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cplusplus/cplusplus-original.svg" />
+ <img align="center" alt="CMake" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cmake/cmake-original.svg" />
+</div>
 
-## Build
+### Sobre o projeto
+
+Atividade 1 de [DIM0126 - Inteligência Artificial para Jogos I](../README.md). Jogo top-down em C++17 que roda no terminal. O mapa é dividido em uma malha de
+áreas, e cada área é um nó de um grafo cujas arestas ligam áreas vizinhas.
+Só as áreas perto do jogador (no máximo quatro) ficam ativas e são
+atualizadas a cada quadro. As outras não gastam processamento e, depois de um
+tempo inativas, são liberadas da memória.
+
+O objetivo é sobreviver até o tempo acabar, fugindo dos inimigos (`e`) e
+pegando itens de vida (`h`) e de munição (`a`, que causa dano em área).
+
+## Compilando e rodando
+
+Precisa de CMake 3.16+ e um compilador com suporte a C++17.
 
 ```sh
-make            # configura e compila
-make run        # compila e executa com a configuração padrão
-make level      # compila e executa lendo assets/levels/level01.json
-make random     # compila e executa com nível gerado aleatoriamente (semente 1)
-make benchmark  # mede tempo de quadro (com/sem janela ativa) em benchmarks/frame_time.csv
+make            # compila
+make run        # roda com a configuração padrão
+make level      # roda com assets/levels/level01.json
+make random     # roda com um nível aleatório (semente 1)
+make benchmark  # mede o tempo de quadro e salva em benchmarks/frame_time.csv
 make clean      # apaga build/
-make rebuild    # apaga tudo e compila do zero
-make help       # lista os alvos
 ```
 
-O `Makefile` da raiz é só um atalho: quem manda na build é o `CMakeLists.txt`.
-Direto pelo CMake, o equivalente é:
+O Makefile só chama o CMake. Sem ele:
 
 ```sh
 cmake -S . -B build
 cmake --build build
-./build/game
+./build/game [arquivo.json | --random <semente>]
 ```
 
-Requisitos: CMake 3.16 ou mais novo e um compilador com C++17. Sem dependências externas.
+## Controles
 
-## Estrutura
+- `W A S D` ou setas: mover
+- `Q E Z C`: diagonais
+- espaço: parar
+- `Ctrl+C`: sair
 
-```
-include/game/                headers públicos
-  Vector2.h                  vetor 2D, distância e interpolação
-  Rectangle.h                retângulo alinhado aos eixos, com testes de colisão
-  Character.h                base com health, takeDamage, heal e isDead
-  Player.h                   jogador: input e movimento
-  NonPlayerCharacter.h       inimigo que persegue o jogador e causa dano por contato
-  Item.h                     coletáveis (HEALTH e AMMUNITION)
-  Area.h                     nó do grafo: limites, inimigos, itens e estado
-  WorldGraph.h               lista de adjacência, janela de áreas ativas, carga sob demanda
-  Viewport.h                 câmera, que não conhece o WorldGraph
-  LevelConfiguration.h       todos os parâmetros de balanceamento em uma struct
-  Renderer.h                 desenho no terminal
-  Game.h                     laço principal, cronômetro e condições de vitória e derrota
-  Benchmark.h                medição de tempo de quadro com/sem janela ativa
-src/                         implementações (Item.h e Rectangle.h não têm .cpp)
-assets/levels/               configurações de nível em JSON
-benchmarks/                  resultados de `make benchmark` em CSV
-```
+O jogador continua andando na última direção escolhida até você apertar
+outra tecla ou o espaço. A câmera acompanha o jogador, então o `@` fica perto
+do centro da tela. Quem se move é a grade de fundo: os `.` marcam o chão e
+`| - +` marcam as bordas entre as áreas.
 
-## Estado atual
+## Níveis
 
-Jogável de ponta a ponta: o jogador se move, os inimigos perseguem e causam
-dano, itens curam ou aplicam dano em área, e tudo aparece no terminal. `make
-random` gera um nível aleatório por semente; `make level` lê um nível de
-`assets/levels/`. `make benchmark` mede e grava o ganho de desempenho da
-janela ativa contra a linha de base ingênua. Detalhes de decisão e do que
-ainda falta (testes automatizados) estão em `PLAN.md`, um nível acima
-deste repositório (fora do controle de versão do jogo).
+Os níveis ficam em `assets/levels/` como JSON com campos numéricos: tamanho
+da malha e das áreas, número de inimigos e itens por área, velocidades, dano,
+tempo de sobrevivência, semente etc. Campo que não aparece no arquivo fica
+com o valor padrão de `LevelConfiguration`.
+
+## Organização do código
+
+- `include/game/`: headers
+- `src/`: implementações
+- `assets/levels/`: níveis
+- `benchmarks/`: resultados do `make benchmark`
+
+As peças principais são `WorldGraph` (grafo de áreas e controle de quais
+estão ativas), `Area` (inimigos e itens de uma área), `Game` (laço principal
+com passo fixo de 1/60 s) e `Renderer` (desenho no terminal).
+
+## O que falta
+
+Testes automatizados.

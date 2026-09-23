@@ -5,7 +5,6 @@
 
 #include "game/Vector2.h"
 
-// Retângulo alinhado aos eixos, definido pelo canto inferior-esquerdo e o tamanho.
 struct Rectangle {
     Vector2 origin;
     Vector2 size;
@@ -25,11 +24,14 @@ struct Rectangle {
                point.y >= bottom() && point.y <= top();
     }
 
-    // Distância do ponto até a borda do retângulo; zero se o ponto estiver dentro.
     float distanceTo(const Vector2& point) const {
         const float horizontal = std::max({left() - point.x, 0.0f, point.x - right()});
         const float vertical = std::max({bottom() - point.y, 0.0f, point.y - top()});
         return std::sqrt(horizontal * horizontal + vertical * vertical);
+    }
+
+    Vector2 clamp(const Vector2& point) const {
+        return {std::clamp(point.x, left(), right()), std::clamp(point.y, bottom(), top())};
     }
 
     bool intersects(const Rectangle& other) const {

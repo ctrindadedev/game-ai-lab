@@ -17,6 +17,7 @@ add_executable(game
     src/LevelConfiguration.cpp
     src/Renderer.cpp
     src/Game.cpp
+    src/Terminal.cpp
 )
 
 target_include_directories(game PRIVATE include)

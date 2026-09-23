@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "game/LevelConfiguration.h"
 #include "game/Player.h"
 #include "game/Renderer.h"
@@ -9,10 +11,10 @@
 enum class GameState {
     RUNNING,
     VICTORY,
-    DEFEAT
+    DEFEAT,
+    INTERRUPTED
 };
 
-// Orquestra o laço principal: input, atualização das áreas ativas e desenho.
 class Game {
 public:
     explicit Game(const LevelConfiguration& configuration);
@@ -26,7 +28,7 @@ public:
     float remainingTime() const { return remainingTime_; }
 
 private:
-    void processInput();
+    void processInput(const std::string& pressedKeys);
 
     LevelConfiguration configuration_;
     WorldGraph world_;

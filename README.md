@@ -18,3 +18,4 @@ Os projetos nascem das atividades da disciplina **DIM0126 - Inteligência Artifi
 |---|---------|-----------|
 | 1 | [WorldGraphGame](./WorldGraphGame) | Jogo top-down no terminal com o mundo dividido em um grafo de áreas, onde só as áreas perto do jogador ficam ativas |
 | 2 | [FPSAgentDesign](./FPSAgentDesign) | Projeto de um agente básico de IA para FPS, dividido em percepção, tomada de decisão e movimento |
+| 3 | [BehaviorAuthoring](./BehaviorAuthoring) | Autoria de comportamento: árvore de comportamento do PacMan como NPC e o Enderman (Minecraft) modelado como árvore e como máquina de estados hierárquica |

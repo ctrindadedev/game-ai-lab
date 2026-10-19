@@ -1,0 +1,461 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{forest}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\usetikzlibrary{shapes.geometric, positioning, fit, arrows.meta, automata, backgrounds}
+
+\definecolor{destaque}{HTML}{1F4E79}
+\definecolor{acao}{HTML}{B5523B}
+\definecolor{cond}{HTML}{F5A04A}
+\definecolor{comp}{HTML}{FFF27A}
+\definecolor{compborda}{HTML}{B8A600}
+\setlist{nosep, leftmargin=*}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\setcounter{secnumdepth}{0}
+
+% Frase de abertura de cada seção: conecta com a anterior.
+\newcommand{\gancho}[1]{\textcolor{destaque}{\textit{#1}}\par}
+
+% Notação das árvores, a mesma do material da aula: ação em trapézio,
+% condição em retângulo, composição em retângulo arredondado, «decorador».
+\newcommand{\seqn}[1]{#1\\[-2pt]{\scriptsize\itshape Sequência}}
+\newcommand{\seln}[1]{#1\\[-2pt]{\scriptsize\itshape Seleção}}
+\newcommand{\usel}[1]{#1\\[-2pt]{\scriptsize\itshape Seleção por utilidade}}
+\newcommand{\deco}[1]{{\scriptsize«#1»}\\}
+\newcommand{\st}[1]{\textsc{#1}}
+
+\forestset{
+  bt/.style={for tree={align=center, font=\footnotesize, inner sep=2.5pt,
+    l sep=6mm, s sep=2mm, edge={draw=gray!70}, parent anchor=south,
+    child anchor=north}},
+  comp/.style={draw=compborda, fill=comp, rounded corners=3pt},
+  cond/.style={draw=cond!70!black, fill=cond},
+  acao/.style={shape=trapezium, trapezium left angle=75,
+    trapezium right angle=75, trapezium stretches body,
+    draw=acao!70!black, fill=acao, text=white},
+  ref/.style={comp, line width=1.3pt, draw=cond!80!black},
+}
+
+\title{\textbf{Autoria de comportamento com árvores e máquinas de estados}\\[0.3em]
+  \large PacMan como NPC e o Enderman do Minecraft}
+\author{Caio Trindade e Luisa Ferreira\\
+  \small Inteligência Artificial para Jogos I --- Métodos para Tomada de Decisão}
+\date{Outubro de 2026}
+
+\begin{document}
+\maketitle
+
+% ---------------------------------------------------------------------------
+\part*{Exercício 1 --- PacMan como NPC}
+
+\gancho{Para virar NPC, o PacMan precisa decidir sozinho o que o jogador
+decide com o joystick.}
+
+Os objetivos, em ordem de importância, são: não ser pego, comer fantasmas
+assustados, pegar a fruta e limpar as pastilhas. Distâncias são medidas pelo
+caminho no labirinto, e não em linha reta; ``perto'' é a no máximo $R$ casas
+(por exemplo, $R = 6$).
+
+\section{(a) Ações}
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright}p{4.2cm}X@{}}
+\toprule
+Ação & O que faz \\
+\midrule
+Fugir & Vai para a casa vizinha mais distante dos fantasmas perigosos;
+  nunca termina (\st{running}). \\
+Ir até pastilha de poder & Vai até a pastilha de poder mais próxima e a come. \\
+Usar túnel & Atravessa o túnel lateral, onde os fantasmas são mais lentos. \\
+Perseguir fantasma assustado & Vai atrás do fantasma assustado mais próximo. \\
+Ir até fruta & Vai até a fruta; falha se ela sumir. \\
+Comer pastilha mais próxima & Vai até a pastilha comum mais próxima. \\
+Rondar & Anda em volta de uma pastilha de poder sem comê-la. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+As ações de movimento devolvem \st{running} enquanto andam e \st{succeed} ao
+chegar.
+
+\section{(b) Condições}
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright}p{5.4cm}X@{}}
+\toprule
+Condição & Verdadeira quando \\
+\midrule
+Fantasma perigoso perto? & Um fantasma não assustado (e não reduzido a
+  olhos) está a até $R$ casas. \\
+Chego à pastilha de poder antes? & $d(\text{PacMan}, p) <
+  d(\text{fantasma}, p)$ para alguma pastilha de poder $p$. \\
+Túnel livre? & O PacMan está mais perto do túnel que os fantasmas. \\
+Fantasma assustado alcançável? & Dá para alcançá-lo antes de o susto acabar. \\
+Susto acabando? & Os fantasmas assustados estão piscando. \\
+Fruta disponível? / Caminho livre? & Há fruta / nenhum fantasma perigoso
+  perto do caminho até ela. \\
+Pastilha de poder ao lado? & A próxima pastilha a comer é de poder. \\
+Restam pastilhas? & Ainda há pastilhas comuns. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{(c) Organização em composições}
+
+A raiz é uma Seleção com os quatro objetivos em ordem de prioridade. Cada
+objetivo é uma Sequência: primeiro as condições, depois a ação. A árvore é
+percorrida a partir da raiz em todo tick, então um ramo à esquerda interrompe
+o que estiver em andamento à direita. A notação é a da aula:
+
+\begin{center}
+\begin{tikzpicture}[every node/.style={font=\footnotesize, align=center,
+    minimum height=7mm, inner sep=3pt}]
+  \node[shape=trapezium, trapezium left angle=75, trapezium right angle=75,
+    trapezium stretches body, draw=acao!70!black, fill=acao, text=white,
+    minimum width=18mm] (a) {Ação};
+  \node[right=8mm of a, draw=cond!70!black, fill=cond, minimum width=18mm] (c) {Condição?};
+  \node[right=8mm of c, draw=compborda, fill=comp, rounded corners=3pt]
+    (s) {Nome\\[-2pt]{\scriptsize\itshape Sequência / Seleção}};
+  \node[right=8mm of s, draw=compborda, fill=comp, rounded corners=3pt,
+    line width=1.3pt, draw=cond!80!black] (r) {Subárvore já\\definida};
+  \node[right=8mm of r] (d) {{\scriptsize«decorador»}\\nó decorado};
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\begin{forest}
+  bt
+  [{\seln{PacMan}}, comp
+    [{Sobreviver}, ref]
+    [{Caçar}, ref]
+    [{\seqn{Pegar fruta}}, comp
+      [{Fruta\\disponível?}, cond]
+      [{Caminho\\livre?}, cond]
+      [{\deco{timeout 5 s}Ir até\\fruta}, acao]
+    ]
+    [{Coletar}, ref]
+  ]
+\end{forest}
+\end{center}
+
+\textbf{Sobreviver} escolhe a escapatória por utilidade, a folga sobre os
+fantasmas até a pastilha de poder ou até o túnel. ``Fugir'' fica por último
+porque nunca falha.
+
+\begin{center}
+\begin{forest}
+  bt
+  [{\seqn{Sobreviver}}, comp
+    [{Fantasma\\perigoso perto?}, cond]
+    [{\usel{Escapar}}, comp
+      [{\seqn{Contra-atacar}}, comp
+        [{Chego à pastilha\\de poder antes?}, cond]
+        [{Ir até pastilha\\de poder}, acao]
+      ]
+      [{\seqn{Despistar}}, comp
+        [{Túnel\\livre?}, cond]
+        [{Usar\\túnel}, acao]
+      ]
+      [{Fugir}, acao]
+    ]
+  ]
+\end{forest}
+\end{center}
+
+\textbf{Caçar} abandona a perseguição quando os fantasmas começam a piscar;
+«enquanto tiver sucesso» encadeia um fantasma após o outro. \textbf{Coletar}
+evita gastar a pastilha de poder com os fantasmas longe: o PacMan ronda e a
+usa de isca.
+
+\begin{center}
+\begin{forest}
+  bt
+  [{\deco{enquanto tiver sucesso}\seqn{Caçar}}, comp
+    [{Fantasma assustado\\alcançável?}, cond]
+    [{\deco{inverte}Susto\\acabando?}, cond]
+    [{Perseguir fantasma\\assustado}, acao]
+  ]
+\end{forest}
+\par\vspace{6mm}
+\begin{forest}
+  bt
+  [{\seln{Coletar}}, comp
+    [{\seqn{Isca}}, comp
+      [{Pastilha de\\poder ao lado?}, cond]
+      [{\deco{inverte}Fantasma\\perigoso perto?}, cond]
+      [{Rondar}, acao]
+    ]
+    [{\seqn{Limpar}}, comp
+      [{Restam\\pastilhas?}, cond]
+      [{Comer pastilha\\mais próxima}, acao]
+    ]
+  ]
+\end{forest}
+\end{center}
+
+% ---------------------------------------------------------------------------
+\part*{Exercício 2 --- O Enderman (Minecraft)}
+
+\gancho{O personagem precisa ter comportamento suficiente para que as duas
+técnicas se diferenciem.}
+
+O Enderman é \textbf{neutro}: vaga e às vezes pega um bloco e o coloca em
+outro lugar. Fica \textbf{hostil} quando é atacado ou encarado por um jogador
+sem abóbora na cabeça; então grita, persegue, se teletransporta para perto e
+ataca. Foge por teleporte da água, da chuva e de projéteis. Modelamos uma
+versão simplificada, com o alvo guardado num \emph{blackboard}.
+
+\section{1(a) Árvore de comportamento}
+
+\begin{center}
+\begin{forest}
+  bt
+  [{\seln{Enderman}}, comp
+    [{\seqn{Evitar água}}, comp
+      [{Tocando água\\ou na chuva?}, cond]
+      [{Teleportar\\para longe}, acao]
+    ]
+    [{\seqn{Esquivar}}, comp
+      [{Projétil\\chegando?}, cond]
+      [{Teleportar\\para longe}, acao]
+    ]
+    [{Ficar hostil}, ref]
+    [{Combate}, ref]
+    [{Vida neutra}, ref]
+  ]
+\end{forest}
+\end{center}
+
+\begin{center}
+\begin{forest}
+  bt
+  [{\seqn{Ficar hostil}}, comp
+    [{\deco{inverte}Tem alvo?}, cond]
+    [{\seln{Provocado?}}, comp
+      [{Foi\\atacado?}, cond]
+      [{\seqn{Encarado}}, comp
+        [{Jogador\\encarando?}, cond]
+        [{\deco{inverte}Jogador com\\abóbora?}, cond]
+      ]
+    ]
+    [{Marcar\\como alvo}, acao]
+  ]
+\end{forest}
+\hspace{2mm}
+\begin{forest}
+  bt
+  [{\seln{Vida neutra}}, comp
+    [{\seqn{Colocar}}, comp
+      [{Carregando\\bloco?}, cond]
+      [{\deco{prob. $p$}Colocar\\bloco}, acao]
+    ]
+    [{\seqn{Pegar}}, comp
+      [{\deco{inverte}Carregando\\bloco?}, cond]
+      [{\deco{prob. $p$}Pegar\\bloco}, acao]
+    ]
+    [{Vagar}, acao]
+  ]
+\end{forest}
+\end{center}
+
+\begin{center}
+\begin{forest}
+  bt, for tree={s sep=1.5mm}
+  [{\seqn{Combate}}, comp
+    [{Tem\\alvo?}, cond]
+    [{\seln{Agir sobre o alvo}}, comp
+      [{\seqn{Intimidar}}, comp
+        [{Provocado há\\menos de 1 s?}, cond]
+        [{Gritar e\\tremer}, acao]
+      ]
+      [{\seqn{Desistir}}, comp
+        [{Alvo\\perdido?}, cond]
+        [{Esquecer\\alvo}, acao]
+      ]
+      [{\seqn{Golpear}}, comp
+        [{Alvo ao\\alcance?}, cond]
+        [{Golpear}, acao]
+      ]
+      [{\seqn{Encurtar}}, comp
+        [{Alvo\\longe?}, cond]
+        [{Teleportar\\para perto}, acao]
+      ]
+      [{Perseguir}, acao]
+    ]
+  ]
+\end{forest}
+\end{center}
+
+A árvore tem \textbf{39 nós}. A ação ``Teleportar para longe'' é
+reaproveitada por dois ramos, e Combate funciona com qualquer alvo do
+blackboard.
+
+\section{1(b) Máquina de estados hierárquica}
+
+Numa FSM plana, ``tocou água'' teria de sair de cada um dos seis estados.
+Na hierárquica, a transição sai uma vez de \textbf{Ativo} e é herdada por
+todos; ao fim do teleporte, a história profunda (H*) devolve o Enderman ao
+sub-estado em que estava.
+
+\begin{center}
+\begin{tikzpicture}[
+    >={Stealth[length=2mm]},
+    s/.style={state, rectangle, rounded corners=4pt, minimum height=8mm,
+      minimum width=17mm, font=\footnotesize, align=center, draw=destaque,
+      fill=destaque!8, inner sep=2pt},
+    sup/.style={draw=destaque, rounded corners=8pt, thick, inner sep=9pt},
+    lab/.style={font=\scriptsize, align=center},
+    every edge/.style={draw, ->, thin},
+  ]
+  % Neutro
+  \node[s] (vagar) at (0,0) {Vagar};
+  \node[s] (manip) at (0,-2.2) {Manipular\\bloco};
+  % Hostil
+  \coordinate (hesq) at (4.4,0);
+  \node[s] (prov) at (5.4,0) {Provocado};
+  \node[s] (pers) at (8.3,0) {Perseguir};
+  \node[s] (atac) at (11.0,0) {Atacar};
+  \node[s] (aprox) at (8.3,-2.2) {Aproximar};
+
+  \begin{scope}[on background layer]
+    \node[sup, fill=gray!6, inner xsep=10mm, inner ysep=12pt,
+      label={[lab, anchor=north west]north west:\textbf{Neutro}}]
+      (neutro) [fit=(vagar)(manip)] {};
+    \node[sup, fill=gray!6, inner ysep=12pt,
+      label={[lab, anchor=north west]north west:\textbf{Hostil}}]
+      (hostil) [fit=(hesq)(prov)(pers)(atac)(aprox)] {};
+    \node[sup, draw=destaque!60, dashed, inner sep=6pt, inner ysep=14pt,
+      label={[lab, anchor=north west]north west:\textbf{Ativo}}]
+      (ativo) [fit=(neutro)(hostil)] {};
+  \end{scope}
+
+  % Fuga, fora de Ativo, e a história profunda na borda de Ativo
+  \node[s] (fuga) at (5.6,-5.4) {Fuga};
+  \node[draw, circle, fill=white, inner sep=1.4pt, font=\scriptsize\bfseries]
+    (hist) at (ativo.south -| 8.3,0) {H*};
+
+  % estados iniciais
+  \draw[->] ([xshift=-10mm]neutro.west) -- (neutro.west);
+  \draw[->] ([xshift=-6mm]vagar.west) -- (vagar.west);
+  \draw[->] (hesq) -- (prov.west);
+
+  % transições internas
+  \path (vagar) edge[bend left=25] node[lab, right] {sorte $p$} (manip)
+        (manip) edge[bend left=25] node[lab, left] {terminou} (vagar)
+        (prov) edge node[lab, above] {após 1 s} (pers)
+        (pers) edge[bend left=18] node[lab, above] {ao alcance} (atac)
+        (atac) edge[bend left=18] node[lab, below] {fora do alcance} (pers)
+        (pers) edge[bend left=20] node[lab, right] {alvo longe} (aprox)
+        (aprox) edge[bend left=20] node[lab, left] {chegou} (pers);
+
+  % transições entre super-estados
+  \draw[->] (neutro.east |- 0,-0.8) -- node[lab, above] {atacado ou\\encarado\\sem abóbora}
+    (hostil.west |- 0,-0.8);
+  \draw[->] (hostil.west |- 0,-1.5) -- node[lab, below] {alvo perdido /\\esquecer alvo}
+    (neutro.east |- 0,-1.5);
+  \draw[->] (ativo.south -| 3.0,0) |- node[lab, pos=0.25, left] {água, chuva\\ou projétil}
+    (fuga.west);
+  \draw[->] (fuga.east) -| node[lab, pos=0.75, right] {teleporte\\concluído} (hist.south);
+\end{tikzpicture}
+\end{center}
+
+Esquecer o alvo é ação da \emph{transição} Hostil~$\to$~Neutro, e não ação
+de saída de Hostil: a saída também dispararia na fuga, e o H* devolveria um
+``Perseguir'' sem alvo. São \textbf{7 estados, 3 super-estados e 11
+transições}.
+
+\section{2 --- Análise}
+
+\gancho{Modelar o mesmo personagem duas vezes deixa as diferenças
+mensuráveis.}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}Xccc@{}}
+\toprule
+ & BT & HFSM & FSM plana \\
+\midrule
+Tamanho (nós ou estados + transições) & 39 & 10 + 11 & 7 + 21 \\
+Mudança: atacar Endermites & 1 nó & 1 guarda & 2 guardas \\
+Mudança: fugir com vida baixa (hipotética) & 3 nós & 1 guarda & 6 guardas \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+A hierarquia elimina a explosão de transições da FSM plana e empata com a BT
+no custo de mudança. As diferenças reais apareceram em outro lugar:
+
+\begin{itemize}
+  \item \textbf{Memória e tempo foram naturais na máquina.} ``Estar
+    hostil'' é estar no estado Hostil, e o grito é a duração de Provocado.
+    Na BT, reavaliada a todo tick, isso teve de ir para o blackboard. Nossa
+    primeira árvore punha o grito em ``Ficar hostil'' e estava errada: se o
+    jogador desviasse o olhar, a sequência falhava e o Enderman nunca ficava
+    hostil.
+  \item \textbf{Prioridade e reaproveitamento foram naturais na árvore.}
+    ``O que interrompe o quê'' é a ordem dos ramos, lida da esquerda para a
+    direita; na máquina, está espalhado em guardas.
+\end{itemize}
+
+\section{2(a) e 2(b) Quando usar cada uma}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}XX@{}}
+\toprule
+Máquina de estados, quando\ldots & Árvore de comportamento, quando\ldots \\
+\midrule
+há poucos modos duradouros, trocados por eventos claros (patrulha e
+  alerta, fases de um chefe) &
+  o comportamento é uma lista de prioridades reavaliada a todo momento,
+  como no PacMan \\
+\addlinespace
+o comportamento depende de história: o estado \emph{é} a memória &
+  há várias alternativas para um objetivo, com fallback ou utilidade \\
+\addlinespace
+há ações de entrada e saída ou transições por tempo, como o grito do
+  Enderman &
+  subárvores serão reaproveitadas em outros personagens \\
+\addlinespace
+o problema já tem forma de máquina: animações, protocolos &
+  o comportamento cresce durante o desenvolvimento: um ramo novo não
+  exige revisar os outros \\
+\midrule
+\textit{Deixa de compensar} quando os estados crescem: a FSM plana do
+  Enderman já tinha 21 transições para 7 estados. &
+  \textit{Custa} guardar no blackboard o que a máquina guarda no estado. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{2(c) Combinando os dois mundos}
+
+É possível e comum, de duas formas:
+
+\begin{enumerate}
+  \item \textbf{Máquina por fora, árvores por dentro.} A HFSM guarda os
+    modos (Neutro, Hostil, Fuga) e cada estado roda uma BT. Dentro de
+    Hostil, a árvore escolhe entre golpear, teleportar ou perseguir.
+  \item \textbf{Árvore por fora, modo no blackboard}, como fizemos no
+    Enderman. A Unreal segue essa linha, e o \emph{StateTree} da Unreal
+    Engine 5 junta numa só estrutura os seletores da árvore com os estados
+    e transições da máquina.
+\end{enumerate}
+
+Vale a pena quando o personagem tem \textbf{modos duradouros e decisões ricas
+dentro de cada modo}, como inimigos com estados de alerta e chefes com
+fases. Não vale para personagens pequenos como o PacMan, que cabe numa
+árvore de quatro ramos: seriam duas notações para manter e depurar.
+
+\end{document}

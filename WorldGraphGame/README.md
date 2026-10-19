@@ -16,7 +16,21 @@ tempo inativas, são liberadas da memória.
 O objetivo é sobreviver até o tempo acabar, fugindo dos inimigos (`e`) e
 pegando itens de vida (`h`) e de munição (`a`, que causa dano em área).
 
-## Compilando e rodando
+### Enunciado
+
+Atividade prática de representação do mundo de um jogo simples	
+
+Implementar um nível de jogo no qual o cenário é formado por 9 áreas organizadas em uma malha que contém itens coletáveis e inimigos (NPCs).
+
+O jogador deve ser capaz de controlar o deslocamento do seu personagem no cenário e os NPCs devem ser controlados por alguma técnica simples de automatização, como por exemplo perserguir o jogador em linha reta.
+
+A janela de visualização (viewport) do jogador deve ser independente da malha, com apenas as áreas próximas ficando ativas e os NPCs contidos nela sendo atualizados.
+
+Mais detalhes sobre a atividade estão disponíveis nos slides da aula de Representação do Mundo.
+
+O arquivo a ser anexado deve apresentar a solução desenvolvida, com as escolhas de projeto que foram efetuadas. Além disso, o arquivo dete conter um link para acesso à solução desenvolvida para que possa ser testada.
+
+### Compilando e rodando
 
 Precisa de CMake 3.16+ e um compilador com suporte a C++17.
 
@@ -37,7 +51,7 @@ cmake --build build
 ./build/game [arquivo.json | --random <semente>]
 ```
 
-## Controles
+### Controles
 
 - `W A S D` ou setas: mover
 - `Q E Z C`: diagonais
@@ -49,14 +63,14 @@ outra tecla ou o espaço. A câmera acompanha o jogador, então o `@` fica perto
 do centro da tela. Quem se move é a grade de fundo: os `.` marcam o chão e
 `| - +` marcam as bordas entre as áreas.
 
-## Níveis
+### Níveis
 
 Os níveis ficam em `assets/levels/` como JSON com campos numéricos: tamanho
 da malha e das áreas, número de inimigos e itens por área, velocidades, dano,
 tempo de sobrevivência, semente etc. Campo que não aparece no arquivo fica
 com o valor padrão de `LevelConfiguration`.
 
-## Organização do código
+### Organização do código
 
 - `include/game/`: headers
 - `src/`: implementações

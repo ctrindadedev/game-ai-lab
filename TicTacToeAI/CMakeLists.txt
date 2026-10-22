@@ -11,6 +11,7 @@ add_executable(tictactoe
     src/Game.cpp
     src/TicTacToe.cpp
     src/Minimax.cpp
+    src/MonteCarloTreeSearch.cpp
     src/Players.cpp
 )
 

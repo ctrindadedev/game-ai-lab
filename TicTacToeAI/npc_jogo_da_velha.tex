@@ -1,0 +1,240 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\definecolor{destaque}{HTML}{1F4E79}
+\setlist{nosep, leftmargin=*}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+% Frase de abertura de cada seção: conecta com a anterior.
+\newcommand{\gancho}[1]{\textcolor{destaque}{\textit{#1}}\par}
+
+\floatname{algorithm}{Algoritmo}
+\algrenewcommand\algorithmicrequire{\textbf{Entrada:}}
+\algrenewcommand\algorithmicensure{\textbf{Saída:}}
+\algrenewcommand\algorithmicfor{\textbf{para cada}}
+\algrenewcommand\algorithmicdo{\textbf{faça}}
+\algrenewcommand\algorithmicif{\textbf{se}}
+\algrenewcommand\algorithmicthen{\textbf{então}}
+\algrenewcommand\algorithmicend{\textbf{fim}}
+\algrenewcommand\algorithmicreturn{\textbf{devolva}}
+\algrenewcommand\algorithmicfunction{\textbf{função}}
+
+\title{\textbf{NPCs para o jogo da velha}\\[0.3em]
+  \large Minimax e Monte Carlo Tree Search}
+\author{Caio Trindade e Luisa Ferreira\\
+  \small Inteligência Artificial para Jogos I --- Busca Adversarial}
+\date{Outubro de 2026}
+
+\begin{document}
+\maketitle
+
+\section{O jogo como problema de busca}
+
+\gancho{Para um NPC decidir uma jogada, o jogo precisa virar algo que um
+algoritmo consiga percorrer.}
+
+Seguimos a formulação de jogos do livro \emph{Artificial Intelligence: A Modern
+Approach} (Russell e Norvig, cap.~5) e a implementação de referência dele, o
+\texttt{games4e.py} do \href{https://github.com/aimacode/aima-python}{aima-python},
+traduzido para C++. Um jogo é definido por:
+
+\begin{itemize}
+  \item \textbf{estado inicial} $s_0$: tabuleiro vazio, X começa;
+  \item $\textsc{ToMove}(s)$: de quem é a vez;
+  \item $\textsc{Actions}(s)$: casas livres;
+  \item $\textsc{Result}(s, a)$: o tabuleiro depois da jogada $a$;
+  \item $\textsc{TerminalTest}(s)$: alguém fez três em linha ou o tabuleiro encheu;
+  \item $\textsc{Utility}(s, p)$: $+1$ se $p$ venceu, $-1$ se perdeu, $0$ no empate.
+\end{itemize}
+
+Essa é a interface \texttt{Game}, comum aos dois NPCs. Um jogador é qualquer
+função que recebe o jogo e o estado e devolve uma jogada; por isso o Minimax e
+o MCTS podem jogar entre si ou contra uma pessoa sem conhecer um ao outro.
+
+O jogo da velha é pequeno: há $9! = 362\,880$ sequências de jogadas no máximo e
+$255\,168$ partidas possíveis. A árvore inteira cabe numa busca completa, o que
+torna o Minimax viável sem nenhuma aproximação.
+
+\section{Minimax}
+
+\gancho{Se o adversário também joga bem, a melhor jogada é a que garante o
+melhor pior caso.}
+
+Os dois jogadores são \textsc{Max} (quem está decidindo) e \textsc{Min} (o
+adversário). O valor minimax de um estado é a utilidade que \textsc{Max}
+consegue garantir a partir dele, supondo que os dois jogam de forma ótima:
+\[
+\textsc{Minimax}(s) =
+\begin{cases}
+\textsc{Utility}(s, \textsc{Max}) & \text{se } s \text{ é terminal}\\
+\max_{a} \textsc{Minimax}(\textsc{Result}(s, a)) & \text{se é a vez de } \textsc{Max}\\
+\min_{a} \textsc{Minimax}(\textsc{Result}(s, a)) & \text{se é a vez de } \textsc{Min}
+\end{cases}
+\]
+
+A decisão (\texttt{minimaxDecision}) escolhe a ação cujo estado resultante tem
+o maior valor. O cálculo é uma busca em profundidade que desce até os estados
+terminais e sobe os valores alternando máximo e mínimo. Com fator de
+ramificação $b$ e profundidade $m$, o custo é $O(b^m)$ em tempo e $O(bm)$ em
+memória; no jogo da velha, $b \le 9$ e $m \le 9$.
+
+\section{Poda alfa-beta}
+
+\gancho{Muitos ramos não podem mudar a decisão; não é preciso visitá-los.}
+
+A poda alfa-beta (\texttt{alphabetaSearch}) chega ao mesmo valor do Minimax
+visitando menos nós. Durante a busca, ela guarda dois limites:
+$\alpha$, o melhor valor já garantido para \textsc{Max} no caminho até ali, e
+$\beta$, o melhor para \textsc{Min}. Quando um nó de \textsc{Max} encontra
+um valor $v \ge \beta$, \textsc{Min} nunca deixaria o jogo chegar ali, e os
+irmãos restantes são descartados; o caso de \textsc{Min} com $v \le \alpha$ é
+simétrico.
+
+\begin{algorithm}[h]
+\caption{Alfa-beta com corte (\texttt{alphabetaCutoffSearch}), lado de \textsc{Max}}
+\begin{algorithmic}[1]
+\Function{MaxValue}{$s, \alpha, \beta, \mathit{prof}$}
+  \If{$\textsc{CutoffTest}(s, \mathit{prof})$} \Return $\textsc{Eval}(s)$ \EndIf
+  \State $v \gets -\infty$
+  \For{$a \in \textsc{Actions}(s)$}
+    \State $v \gets \max(v, \textsc{MinValue}(\textsc{Result}(s, a), \alpha, \beta, \mathit{prof}+1))$
+    \If{$v \ge \beta$} \Return $v$ \Comment{poda}\EndIf
+    \State $\alpha \gets \max(\alpha, v)$
+  \EndFor
+  \State \Return $v$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\textsc{MinValue} é igual trocando $\max$ por $\min$, $-\infty$ por $+\infty$
+e a poda por $v \le \alpha$. Na raiz, a jogada escolhida é a de maior
+\textsc{MinValue}; em caso de empate, fica a primeira na ordem de
+\textsc{Actions}, da casa $(1,1)$ à $(3,3)$.
+
+\section{Dificuldade: corte por profundidade}
+
+\gancho{Um Minimax completo nunca perde. Para ter níveis, ele precisa enxergar
+menos.}
+
+A versão com corte para de descer quando a profundidade passa de $d$
+($\textsc{CutoffTest}$: $\mathit{prof} > d$ ou estado terminal). Nesse ponto,
+o estado vale $\textsc{Eval}(s)$, que por padrão é a própria utilidade: $\pm1$
+se o jogo acabou e $0$ caso contrário. Ou seja, o que fica além do horizonte é
+tratado como empate. As jogadas da raiz são avaliadas com profundidade 1:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Nível & Enxerga & Consequência \\
+\midrule
+$d = 0$ & só a própria jogada & ganha quando pode, mas não bloqueia \\
+$d = 1$ & a própria jogada e a resposta & bloqueia vitórias imediatas \\
+$d = 2$ & mais uma jogada própria & ainda não prevê garfos (duas ameaças) \\
+completo & até o fim do jogo & joga de forma ótima, nunca perde \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Escolhemos a profundidade, e não uma probabilidade de jogada aleatória, porque
+ela é o equivalente ao número de iterações do MCTS: nos dois casos, a
+dificuldade é quanto o agente \emph{pensa} antes de jogar, e o confronto entre
+eles compara o uso desse orçamento.
+
+\section{Implementação}
+
+\gancho{A tradução do aima-python manteve a lógica e mudou só os nomes para o
+estilo do repositório.}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+Arquivo & Conteúdo (nome no aima-python) \\
+\midrule
+\texttt{Game.h/.cpp} & \texttt{GameState}, \texttt{Game} e \texttt{playGame} (\texttt{play\_game}) \\
+\texttt{TicTacToe.h/.cpp} & \texttt{TicTacToe} \\
+\texttt{Minimax.h/.cpp} & \texttt{minimaxDecision}, \texttt{alphabetaSearch} e
+  \texttt{alphabetaCutoffSearch} (\texttt{minimax\_decision},
+  \texttt{alphabeta\_search}, \texttt{alphabeta\_cutoff\_search}) \\
+\texttt{Players.h/.cpp} & \texttt{queryPlayer}, \texttt{randomPlayer} e
+  \texttt{alphabetaPlayer} (\texttt{query\_player}, \texttt{random\_player},
+  \texttt{alphabeta\_player}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+A única mudança de comportamento é no \texttt{queryPlayer}: ele pede a jogada
+de novo quando ela é inválida. No original, uma jogada inválida não altera o
+estado, mas passa a vez, e o próximo jogador joga com a peça errada.
+
+Os jogadores são escolhidos pela linha de comando, X primeiro:
+\texttt{./build/tictactoe minimax:1 aleatorio}. As opções são \texttt{humano},
+\texttt{aleatorio}, \texttt{minimax} (completo) e \texttt{minimax:<d>}.
+
+\section{Resultados do Minimax}
+
+\gancho{Os níveis precisam ser diferentes na prática, não só na teoria.}
+
+Cada nível jogou 200 partidas contra o jogador aleatório como X (primeiro a
+jogar) e 200 como O.
+
+\begin{center}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{3}{c}{Como X} & \multicolumn{3}{c}{Como O} \\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+Nível & Vitórias & Empates & Derrotas & Vitórias & Empates & Derrotas \\
+\midrule
+$d = 0$  & 176 & 2 & 22 & 121 & 2  & 77 \\
+$d = 1$  & 192 & 5 & 3  & 149 & 31 & 20 \\
+$d = 2$  & 189 & 6 & 5  & 152 & 29 & 19 \\
+completo & 199 & 1 & 0  & 166 & 34 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+O Minimax completo nunca perdeu. A maior diferença está entre $d = 0$ e
+$d = 1$: sem ver a resposta do adversário, o NPC não bloqueia e perde 77
+partidas como O; vendo-a, perde 20. Entre $d = 1$ e $d = 2$ quase não há
+diferença: o lance extra mostra as próprias vitórias um lance adiante, mas
+ainda não chega aos garfos do adversário, que só aparecem olhando mais longe.
+Jogar como O é mais difícil para todos os níveis, já que X começa.
+
+Contra o Minimax completo, $d = 1$ e $d = 2$ empatam jogando como X, e $d = 0$
+perde; jogando como O, todos os níveis limitados perdem. Como os dois lados são
+determinísticos, cada confronto entre níveis do Minimax é sempre a mesma
+partida.
+
+% ---------------------------------------------------------------------------
+% A completar: Monte Carlo Tree Search
+% - seleção (UCB), expansão, simulação e retropropagação
+% - dificuldade pelo número de iterações N
+% - resultados do MCTS contra o jogador aleatório
+
+\section{Monte Carlo Tree Search}
+
+\gancho{}
+
+% A completar: Minimax contra MCTS
+% - partidas entre os níveis de profundidade d e de iterações N,
+%   alternando quem começa
+% - comparação e conclusão
+
+\section{Minimax contra MCTS}
+
+\gancho{}
+
+\end{document}

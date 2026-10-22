@@ -187,7 +187,11 @@ estado, mas passa a vez, e o próximo jogador joga com a peça errada.
 Os jogadores são escolhidos pela linha de comando, X primeiro:
 \texttt{./build/tictactoe minimax:1 aleatorio}. As opções são \texttt{humano},
 \texttt{aleatorio}, \texttt{minimax} (completo), \texttt{minimax:<d>},
-\texttt{mcts} ($N = 1000$) e \texttt{mcts:<N>}.
+\texttt{mcts} ($N = 1000$) e \texttt{mcts:<N>}. Cada jogada aparece no
+terminal com o tabuleiro depois dela (por exemplo, \texttt{O (mcts:100) joga
+(2, 2)}), o que permite acompanhar a decisão de cada NPC. Esse log fica no
+\texttt{main.cpp}, que envolve cada jogador; o \texttt{playGame} continua igual
+ao original, que só mostra o estado final.
 
 \section{Resultados do Minimax}
 
@@ -383,5 +387,93 @@ dá valor ao empate.
 No jogo da velha, a árvore é pequena e o Minimax completo é mais simples e
 garantido. O MCTS compensa em jogos maiores, em que a busca completa não cabe
 e não há uma boa função de avaliação para o corte.
+
+\section{Comparação com FSM e árvore de comportamento}
+
+\gancho{Na autoria de comportamento, o designer escreve as regras. Na busca, o
+NPC só conhece as regras do jogo e descobre sozinho a jogada.}
+
+Uma máquina de estados (FSM) ou uma árvore de comportamento (BT) para o jogo
+da velha seria uma lista de regras em ordem de prioridade, por exemplo um
+seletor com: ganhar se der, bloquear a vitória do adversário, criar um garfo,
+bloquear um garfo, ocupar o centro, um canto e, por fim, um lado. Escritas com
+cuidado, essas regras jogam de forma ótima, porque o jogo da velha é pequeno e
+já está resolvido. Mas quem resolveu foi o designer, não o NPC.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+\toprule
+ & FSM / BT & Minimax & MCTS \\
+\midrule
+Quem decide a jogada & regras escritas pelo designer & busca em todas as
+  jogadas até $d$ & simulações aleatórias guiadas pelo UCB \\
+O que precisa saber & a estratégia do jogo & as regras (e uma avaliação, se
+  houver corte) & só as regras \\
+Previsibilidade & total & total, sempre a mesma partida & varia de partida
+  para partida \\
+Custo por jogada & baixo e constante & exponencial em $d$ & proporcional a $N$ \\
+Dificuldade & tirar ou trocar regras & profundidade $d$ & iterações $N$ \\
+Depuração & regra a regra & difícil de explicar uma jogada & difícil de
+  explicar uma jogada \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+A FSM e a BT dão controle ao designer e custam quase nada para executar, mas
+cada estratégia nova precisa ser escrita à mão, e um erro nas regras vira um
+ponto fraco que o jogador aprende a explorar. O Minimax e o MCTS não têm esse
+problema, porque a estratégia vem da busca; em troca, gastam processamento a
+cada jogada e são mais difíceis de ajustar para um comportamento específico,
+como ``jogar de forma agressiva''. Os níveis também mudam de natureza: numa BT,
+um NPC fácil é um NPC sem algumas regras, enquanto na busca é um NPC que pensa
+menos ($d$ ou $N$ menores).
+
+As abordagens também se combinam. Uma BT ou FSM pode cuidar do que é roteiro,
+como reagir, provocar o jogador ou escolher o nível, e chamar o Minimax ou o
+MCTS num nó de ação quando é hora de decidir a jogada.
+
+\section{Dificuldades e decisões de projeto}
+
+\gancho{Por fim, o que foi escolhido de propósito e o que deu trabalho.}
+
+\paragraph{Decisões.}
+\begin{itemize}
+  \item \textbf{Traduzir o aima-python sem mudar a lógica.} Assim, os
+    algoritmos são os mesmos do livro, e qualquer diferença de comportamento
+    vem do jogo, não da implementação. As únicas mudanças são o
+    \texttt{queryPlayer}, que pede a jogada de novo quando ela é inválida, e o
+    log das jogadas, que fica fora do framework.
+  \item \textbf{Mesma ordem de desempate do Python.} O \texttt{max} do Python
+    devolve o primeiro maior valor. Por isso os filhos de um nó do MCTS ficam
+    num vetor na ordem de \textsc{Actions}, como o dicionário do original, e
+    não num \texttt{std::map}, que os reordenaria.
+  \item \textbf{Dificuldade pelo quanto o NPC pensa} ($d$ e $N$), e não por
+    jogadas aleatórias de propósito, para que os níveis dos dois NPCs sejam
+    comparáveis (seções~4 e~8).
+  \item \textbf{Empate valendo zero no MCTS}, como no original. Isso custa
+    algumas derrotas contra o jogador aleatório (seção~7), mas mudar daria um
+    algoritmo diferente do de referência.
+\end{itemize}
+
+\paragraph{Dificuldades.}
+\begin{itemize}
+  \item \textbf{Sorteio repetido no Windows.} No MinGW antigo, o
+    \texttt{std::random\_device} devolve sempre a mesma sequência, e todas as
+    partidas do jogador aleatório saíam iguais. A semente passou a misturar o
+    \texttt{random\_device} com o relógio (\texttt{std::seed\_seq}), e o MCTS usa
+    a mesma solução nas simulações.
+  \item \textbf{Detalhes que o Python esconde.} Em C++, $U$ e $N$ precisam ser
+    \texttt{double}: com inteiros, $U/N$ seria uma divisão inteira e o UCB
+    sairia errado. Os nós do MCTS também precisam de dono explícito
+    (\texttt{std::unique\_ptr}), já que não há coletor de lixo.
+  \item \textbf{Medir um NPC que não é determinístico.} Entre dois Minimax,
+    cada confronto é sempre a mesma partida, mas com o MCTS cada par precisou
+    de centenas de partidas para os números serem confiáveis.
+  \item \textbf{Um resultado contraintuitivo.} Mesmo com $N = 10000$, o MCTS
+    perdia algumas partidas como O para o jogador aleatório. A explicação era o
+    empate valer zero, e o teste com o empate valendo $0{,}5$ confirmou
+    (seção~7).
+\end{itemize}
 
 \end{document}

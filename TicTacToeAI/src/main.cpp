@@ -68,6 +68,23 @@ bool parsePlayer(const std::string& name, Player& player) {
     return false;
 }
 
+// Envolve o jogador para mostrar cada jogada e o tabuleiro depois dela. O
+// tabuleiro não aparece no fim do jogo, que o playGame já mostra, nem antes da
+// vez de um humano, que o queryPlayer já mostra.
+Player logMoves(const std::string& name, Player player, bool nextIsHuman) {
+    return [name, player, nextIsHuman](const Game& game, const GameState& state) {
+        const Move move = player(game, state);
+        std::cout << game.toMove(state) << " (" << name << ") joga (" << move.first << ", "
+                  << move.second << ")\n";
+        const GameState next = game.result(state, move);
+        if (!nextIsHuman && !game.terminalTest(next)) {
+            game.display(next);
+            std::cout << '\n';
+        }
+        return move;
+    };
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -85,7 +102,8 @@ int main(int argc, char** argv) {
               << "X: " << nameX << " | O: " << nameO << "\n\n";
 
     const TicTacToe game;
-    const int utility = game.playGame({playerX, playerO});
+    const int utility = game.playGame({logMoves(nameX, playerX, nameO == "humano"),
+                                       logMoves(nameO, playerO, nameX == "humano")});
 
     if (utility > 0) {
         std::cout << "\nX venceu.\n";

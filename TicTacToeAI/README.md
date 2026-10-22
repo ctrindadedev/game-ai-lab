@@ -56,7 +56,7 @@ X sempre começa. Sem argumentos, é `humano` contra `minimax`.
 ./build/tictactoe mcts:100 minimax:2
 ```
 
-As casas são `(linha, coluna)`, de `(1, 1)` no canto superior esquerdo até `(3, 3)`.
+As casas são `(linha, coluna)`, de `(1, 1)` no canto superior esquerdo até `(3, 3)`. Cada jogada aparece no terminal com o tabuleiro depois dela, por exemplo `O (mcts:100) joga (2, 2)`.
 
 ### Organização do código
 

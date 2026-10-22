@@ -27,6 +27,7 @@
 \algrenewcommand\algorithmicensure{\textbf{Saída:}}
 \algrenewcommand\algorithmicfor{\textbf{para cada}}
 \algrenewcommand\algorithmicdo{\textbf{faça}}
+\algrenewcommand\algorithmicwhile{\textbf{enquanto}}
 \algrenewcommand\algorithmicif{\textbf{se}}
 \algrenewcommand\algorithmicthen{\textbf{então}}
 \algrenewcommand\algorithmicend{\textbf{fim}}
@@ -226,7 +227,99 @@ partida.
 
 \section{Monte Carlo Tree Search}
 
-\gancho{}
+\gancho{O Minimax olha todos os ramos; o MCTS troca essa garantia por
+partidas ao acaso.}
+
+O MCTS (\texttt{monteCarloTreeSearch}) monta uma árvore a partir do estado
+atual. Cada nó $n$ guarda $U(n)$, o número de vitórias, e $N(n)$, o número de
+visitas. Cada iteração tem quatro etapas:
+
+\begin{enumerate}
+  \item \textbf{Seleção}: a partir da raiz, desce sempre pelo filho de maior
+    UCB até chegar a um nó sem filhos:
+    \[
+    \textsc{UCB}(n) = \frac{U(n)}{N(n)} + C\sqrt{\frac{\ln N(\mathit{pai}(n))}{N(n)}},
+    \qquad C = 1{,}4,
+    \]
+    com $\textsc{UCB}(n) = \infty$ se $N(n) = 0$. O primeiro termo favorece as
+    jogadas que já deram certo; o segundo, as pouco visitadas.
+  \item \textbf{Expansão}: se a folha não é terminal, ganha um filho para cada
+    jogada de $\textsc{Actions}$, e a seleção continua a partir dela. Como os
+    filhos novos têm UCB infinito, o primeiro deles é escolhido.
+  \item \textbf{Simulação}: a partir do filho, os dois lados jogam ao acaso até
+    o fim. O resultado é a utilidade com o sinal trocado para o jogador da vez
+    no filho, ou seja, a utilidade para quem fez a jogada que leva até ele.
+  \item \textbf{Retropropagação}: o resultado sobe até a raiz, trocando de
+    sinal a cada nível. Um nó só soma em $U$ quando o resultado é positivo;
+    assim, $U(n)$ conta as vitórias de quem escolhe $n$, e a seleção maximiza
+    para o jogador da vez em cada nível.
+\end{enumerate}
+
+\begin{algorithm}[h]
+\caption{Monte Carlo Tree Search (\texttt{monteCarloTreeSearch})}
+\begin{algorithmic}[1]
+\Function{MCTS}{$s_0, N$}
+  \State $\mathit{raiz} \gets$ nó com estado $s_0$
+  \For{$i = 1, \dots, N$}
+    \State $\mathit{folha} \gets \textsc{Select}(\mathit{raiz})$
+    \State $\mathit{filho} \gets \textsc{Expand}(\mathit{folha})$
+    \State $r \gets \textsc{Simulate}(\mathit{filho}.\mathit{estado})$
+    \State $\textsc{Backprop}(\mathit{filho}, r)$
+  \EndFor
+  \State \Return a jogada do filho da raiz com maior $N$
+\EndFunction
+\Statex
+\Function{Simulate}{$s$}
+  \State $p \gets \textsc{ToMove}(s)$
+  \While{\textbf{não} $\textsc{TerminalTest}(s)$}
+    \State $s \gets \textsc{Result}(s, a)$, com $a$ sorteada de $\textsc{Actions}(s)$
+  \EndWhile
+  \State \Return $-\textsc{Utility}(s, p)$
+\EndFunction
+\Statex
+\Function{Backprop}{$n, r$}
+  \If{$r > 0$} $U(n) \gets U(n) + r$ \EndIf
+  \State $N(n) \gets N(n) + 1$
+  \If{$n$ tem pai} $\textsc{Backprop}(\mathit{pai}(n), -r)$ \EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+No original, a linha que daria $0{,}5$ ao empate está comentada, e mantivemos
+assim: para o MCTS, empatar vale o mesmo que perder. A jogada final é a mais
+visitada, e não a de maior média, porque é a que a seleção mais confirmou.
+
+\paragraph{Dificuldade.} O equivalente à profundidade $d$ do Minimax é o
+número de iterações $N$: com poucas iterações, a árvore é rasa e as
+estimativas, ruidosas. Na linha de comando, \texttt{mcts} usa o padrão
+$N = 1000$ e \texttt{mcts:<N>} escolhe outro valor.
+
+\paragraph{Resultados.} Como na seção~6, cada nível jogou 200 partidas contra
+o jogador aleatório como X e 200 como O.
+
+\begin{center}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{3}{c}{Como X} & \multicolumn{3}{c}{Como O} \\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+Nível & Vitórias & Empates & Derrotas & Vitórias & Empates & Derrotas \\
+\midrule
+$N = 10$     & 176 & 4 & 20 & 138 & 3 & 59 \\
+$N = 100$    & 197 & 3 & 0  & 169 & 4 & 27 \\
+$N = 1000$   & 199 & 1 & 0  & 183 & 8 & 9  \\
+$N = 10000$  & 199 & 1 & 0  & 184 & 9 & 7  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Com $N = 10$, o MCTS mal passa da raiz, e o resultado fica perto do
+Minimax com $d = 0$. A
+partir de $N = 100$, ele não perde mais como X. Como O, vence mais que o
+Minimax completo (183 contra 166 com $N = 1000$), mas ainda perde algumas
+partidas: como o empate não vale nada, ele prefere jogadas que ganham muitas
+simulações aleatórias a jogadas que só garantem o empate. Num teste à parte,
+com a linha do empate descomentada, as derrotas como O caíram para zero com
+$N = 1000$ e $N = 10000$ (178/22/0 e 177/23/0), em troca de menos vitórias.
 
 % A completar: Minimax contra MCTS
 % - partidas entre os níveis de profundidade d e de iterações N,
@@ -235,6 +328,56 @@ partida.
 
 \section{Minimax contra MCTS}
 
-\gancho{}
+\gancho{Contra o jogador aleatório, quase todos os níveis parecem bons. O teste
+de verdade é um NPC contra o outro.}
+
+Cada nível do MCTS jogou contra cada nível do Minimax 100 partidas como X e
+100 como O. O Minimax é determinístico, mas o MCTS não, por isso cada par
+precisa de várias partidas. A tabela mostra vitórias, empates e derrotas do
+MCTS (V/E/D).
+
+\begin{center}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{4}{c}{Minimax} \\
+\cmidrule(l){2-5}
+MCTS & $d = 0$ & $d = 1$ & $d = 2$ & completo \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{MCTS como X}} \\
+$N = 10$    & 87/0/13  & 55/5/40  & 54/9/37  & 0/3/97   \\
+$N = 100$   & 100/0/0  & 39/59/2  & 36/61/3  & 0/90/10  \\
+$N = 1000$  & 100/0/0  & 13/87/0  & 8/92/0   & 0/97/3   \\
+$N = 10000$ & 100/0/0  & 0/100/0  & 0/100/0  & 0/100/0  \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{MCTS como O}} \\
+$N = 10$    & 44/0/56  & 3/5/92   & 10/3/87  & 0/6/94   \\
+$N = 100$   & 97/0/3   & 28/51/21 & 28/55/17 & 0/38/62  \\
+$N = 1000$  & 100/0/0  & 0/100/0  & 0/100/0  & 0/100/0  \\
+$N = 10000$ & 100/0/0  & 0/100/0  & 0/100/0  & 0/100/0  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Com $N = 10$, o MCTS ainda ganha mais do que perde como X contra os níveis
+com corte, mas como O perde a maioria das partidas para todos eles, e o
+Minimax completo vence 97 das 100 partidas em que o MCTS começa. Com
+$N = 100$, ele já vence $d = 0$ em 197 de 200 partidas e empata a maioria das partidas contra
+$d = 1$ e $d = 2$, mas ainda perde algumas. Com $N = 1000$, não perde para os
+níveis com corte e só perdeu 3 partidas para o Minimax completo, todas como X;
+com $N = 10000$, empata todas contra $d \ge 1$ e vence todas contra $d = 0$.
+As vitórias contra $d = 1$ e $d = 2$ somem com $N = 10000$: quanto mais
+iterações, mais a árvore supõe que o adversário responde bem, e o MCTS deixa
+de arriscar jogadas que só ganham de quem não vê a ameaça.
+
+\paragraph{Conclusão.} O Minimax completo é ótimo e sempre joga a mesma
+partida, e os seus níveis mudam aos saltos: $d = 0$ não bloqueia, e $d = 1$ e $d = 2$ quase
+não se distinguem. O MCTS não conhece nada além das regras e varia de partida
+para partida; a força dele cresce aos poucos com $N$, o que dá níveis mais
+graduais. Com $N = 10000$, não perdeu para nenhum nível do Minimax, mas
+ainda perdeu 7 de 200 partidas como O contra o jogador aleatório, porque não
+dá valor ao empate.
+No jogo da velha, a árvore é pequena e o Minimax completo é mais simples e
+garantido. O MCTS compensa em jogos maiores, em que a busca completa não cabe
+e não há uma boa função de avaliação para o corte.
 
 \end{document}

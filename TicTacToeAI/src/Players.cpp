@@ -1,6 +1,7 @@
 #include "game/Players.h"
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <random>
 #include <sstream>
@@ -37,7 +38,12 @@ Move queryPlayer(const Game& game, const GameState& state) {
 }
 
 Move randomPlayer(const Game& game, const GameState& state) {
-    static std::mt19937 random{std::random_device{}()};
+    // O relógio entra na semente porque em alguns compiladores (MinGW antigo)
+    // o random_device devolve sempre a mesma sequência.
+    static std::seed_seq seed{
+        std::random_device{}(),
+        static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count())};
+    static std::mt19937 random{seed};
 
     const std::vector<Move> moves = game.actions(state);
     if (moves.empty()) {

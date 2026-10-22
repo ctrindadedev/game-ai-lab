@@ -170,9 +170,12 @@ Arquivo & Conteúdo (nome no aima-python) \\
 \texttt{Minimax.h/.cpp} & \texttt{minimaxDecision}, \texttt{alphabetaSearch} e
   \texttt{alphabetaCutoffSearch} (\texttt{minimax\_decision},
   \texttt{alphabeta\_search}, \texttt{alphabeta\_cutoff\_search}) \\
-\texttt{Players.h/.cpp} & \texttt{queryPlayer}, \texttt{randomPlayer} e
-  \texttt{alphabetaPlayer} (\texttt{query\_player}, \texttt{random\_player},
-  \texttt{alphabeta\_player}) \\
+\texttt{MonteCarloTreeSearch.h/.cpp} & \texttt{monteCarloTreeSearch}
+  (\texttt{monte\_carlo\_tree\_search}, com \texttt{MCT\_Node} e \texttt{ucb}
+  do \texttt{utils.py}) \\
+\texttt{Players.h/.cpp} & \texttt{queryPlayer}, \texttt{randomPlayer},
+  \texttt{alphabetaPlayer} e \texttt{mctsPlayer} (\texttt{query\_player},
+  \texttt{random\_player}, \texttt{alphabeta\_player}, \texttt{mcts\_player}) \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -183,7 +186,8 @@ estado, mas passa a vez, e o próximo jogador joga com a peça errada.
 
 Os jogadores são escolhidos pela linha de comando, X primeiro:
 \texttt{./build/tictactoe minimax:1 aleatorio}. As opções são \texttt{humano},
-\texttt{aleatorio}, \texttt{minimax} (completo) e \texttt{minimax:<d>}.
+\texttt{aleatorio}, \texttt{minimax} (completo), \texttt{minimax:<d>},
+\texttt{mcts} ($N = 1000$) e \texttt{mcts:<N>}.
 
 \section{Resultados do Minimax}
 

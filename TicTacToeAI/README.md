@@ -47,10 +47,13 @@ X sempre começa. Sem argumentos, é `humano` contra `minimax`.
 - `aleatorio`: jogada válida ao acaso
 - `minimax`: Minimax com poda alfa-beta até o fim do jogo (imbatível)
 - `minimax:<d>`: Minimax com poda alfa-beta cortado na profundidade `d`
+- `mcts`: Monte Carlo Tree Search com 1000 iterações
+- `mcts:<N>`: Monte Carlo Tree Search com `N` iterações
 
 ```sh
 ./build/tictactoe humano minimax:1
 ./build/tictactoe minimax aleatorio
+./build/tictactoe mcts:100 minimax:2
 ```
 
 As casas são `(linha, coluna)`, de `(1, 1)` no canto superior esquerdo até `(3, 3)`.
@@ -66,7 +69,7 @@ Os arquivos seguem as partes do aima-python:
 - `TicTacToe.h` / `TicTacToe.cpp`: o jogo da velha
 - `Minimax.h` / `Minimax.cpp`: `minimaxDecision`, `alphabetaSearch` e `alphabetaCutoffSearch`
 - `MonteCarloTreeSearch.h` / `MonteCarloTreeSearch.cpp`: `monteCarloTreeSearch`
-- `Players.h` / `Players.cpp`: `queryPlayer`, `randomPlayer` e `alphabetaPlayer`
+- `Players.h` / `Players.cpp`: `queryPlayer`, `randomPlayer`, `alphabetaPlayer` e `mctsPlayer`
 - `main.cpp`: escolhe os jogadores pela linha de comando e roda a partida
 
 A única diferença em relação ao original é o `queryPlayer`: ele pede a jogada de novo quando ela é inválida. No Python, uma jogada inválida não muda o estado e passa a vez.

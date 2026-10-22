@@ -12,3 +12,6 @@ Move randomPlayer(const Game& game, const GameState& state);
 
 // Minimax com poda alfa-beta até as folhas.
 Move alphabetaPlayer(const Game& game, const GameState& state);
+
+// Monte Carlo Tree Search com o número de iterações padrão.
+Move mctsPlayer(const Game& game, const GameState& state);

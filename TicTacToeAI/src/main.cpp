@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "game/Minimax.h"
+#include "game/MonteCarloTreeSearch.h"
 #include "game/Players.h"
 #include "game/TicTacToe.h"
 
@@ -15,7 +16,9 @@ void printUsage() {
               << "  humano       joga pelo teclado\n"
               << "  aleatorio    jogada válida ao acaso\n"
               << "  minimax      minimax com poda alfa-beta até o fim do jogo\n"
-              << "  minimax:<d>  minimax com poda alfa-beta cortado na profundidade d\n";
+              << "  minimax:<d>  minimax com poda alfa-beta cortado na profundidade d\n"
+              << "  mcts         monte carlo tree search com 1000 iterações\n"
+              << "  mcts:<N>     monte carlo tree search com N iterações\n";
 }
 
 // Converte o nome do jogador na linha de comando em um Player.
@@ -32,6 +35,10 @@ bool parsePlayer(const std::string& name, Player& player) {
         player = alphabetaPlayer;
         return true;
     }
+    if (name == "mcts") {
+        player = mctsPlayer;
+        return true;
+    }
 
     const std::string depthPrefix = "minimax:";
     if (name.compare(0, depthPrefix.size(), depthPrefix) == 0) {
@@ -39,6 +46,19 @@ bool parsePlayer(const std::string& name, Player& player) {
             const int d = std::stoi(name.substr(depthPrefix.size()));
             player = [d](const Game& game, const GameState& state) {
                 return alphabetaCutoffSearch(state, game, d);
+            };
+            return true;
+        } catch (const std::exception&) {
+            return false;
+        }
+    }
+
+    const std::string iterationsPrefix = "mcts:";
+    if (name.compare(0, iterationsPrefix.size(), iterationsPrefix) == 0) {
+        try {
+            const int N = std::stoi(name.substr(iterationsPrefix.size()));
+            player = [N](const Game& game, const GameState& state) {
+                return monteCarloTreeSearch(state, game, N);
             };
             return true;
         } catch (const std::exception&) {

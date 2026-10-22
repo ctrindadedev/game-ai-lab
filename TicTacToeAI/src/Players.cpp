@@ -8,6 +8,7 @@
 #include <string>
 
 #include "game/Minimax.h"
+#include "game/MonteCarloTreeSearch.h"
 
 Move queryPlayer(const Game& game, const GameState& state) {
     std::cout << "estado atual:\n";
@@ -55,4 +56,8 @@ Move randomPlayer(const Game& game, const GameState& state) {
 
 Move alphabetaPlayer(const Game& game, const GameState& state) {
     return alphabetaSearch(state, game);
+}
+
+Move mctsPlayer(const Game& game, const GameState& state) {
+    return monteCarloTreeSearch(state, game);
 }

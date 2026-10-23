@@ -12,15 +12,10 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage[hidelinks]{hyperref}
-\usepackage{xcolor}
 
-\definecolor{destaque}{HTML}{1F4E79}
 \setlist{nosep, leftmargin=*}
 \setlength{\parskip}{0.4em}
 \setlength{\parindent}{0pt}
-
-% Frase de abertura de cada seção: conecta com a anterior.
-\newcommand{\gancho}[1]{\textcolor{destaque}{\textit{#1}}\par}
 
 \floatname{algorithm}{Algoritmo}
 \algrenewcommand\algorithmicrequire{\textbf{Entrada:}}
@@ -45,13 +40,10 @@
 
 \section{O jogo como problema de busca}
 
-\gancho{Para um NPC decidir uma jogada, o jogo precisa virar algo que um
-algoritmo consiga percorrer.}
-
 Seguimos a formulação de jogos do livro \emph{Artificial Intelligence: A Modern
-Approach} (Russell e Norvig, cap.~5) e a implementação de referência dele, o
+Approach} (Russell e Norvig, cap.~5). O código é uma tradução para C++ do
 \texttt{games4e.py} do \href{https://github.com/aimacode/aima-python}{aima-python},
-traduzido para C++. Um jogo é definido por:
+sem mudanças na lógica. Um jogo é definido por:
 
 \begin{itemize}
   \item \textbf{estado inicial} $s_0$: tabuleiro vazio, X começa;
@@ -67,13 +59,10 @@ função que recebe o jogo e o estado e devolve uma jogada; por isso o Minimax e
 o MCTS podem jogar entre si ou contra uma pessoa sem conhecer um ao outro.
 
 O jogo da velha é pequeno: há $9! = 362\,880$ sequências de jogadas no máximo e
-$255\,168$ partidas possíveis. A árvore inteira cabe numa busca completa, o que
-torna o Minimax viável sem nenhuma aproximação.
+$255\,168$ partidas possíveis, então o Minimax consegue percorrer a árvore
+inteira.
 
 \section{Minimax}
-
-\gancho{Se o adversário também joga bem, a melhor jogada é a que garante o
-melhor pior caso.}
 
 Os dois jogadores são \textsc{Max} (quem está decidindo) e \textsc{Min} (o
 adversário). O valor minimax de um estado é a utilidade que \textsc{Max}
@@ -94,8 +83,6 @@ ramificação $b$ e profundidade $m$, o custo é $O(b^m)$ em tempo e $O(bm)$ em
 memória; no jogo da velha, $b \le 9$ e $m \le 9$.
 
 \section{Poda alfa-beta}
-
-\gancho{Muitos ramos não podem mudar a decisão; não é preciso visitá-los.}
 
 A poda alfa-beta (\texttt{alphabetaSearch}) chega ao mesmo valor do Minimax
 visitando menos nós. Durante a busca, ela guarda dois limites:
@@ -126,16 +113,13 @@ e a poda por $v \le \alpha$. Na raiz, a jogada escolhida é a de maior
 \textsc{MinValue}; em caso de empate, fica a primeira na ordem de
 \textsc{Actions}, da casa $(1,1)$ à $(3,3)$.
 
-\section{Dificuldade: corte por profundidade}
-
-\gancho{Um Minimax completo nunca perde. Para ter níveis, ele precisa enxergar
-menos.}
+\section{Dificuldade: corte por profundidade}\label{sec:corte}
 
 A versão com corte para de descer quando a profundidade passa de $d$
 ($\textsc{CutoffTest}$: $\mathit{prof} > d$ ou estado terminal). Nesse ponto,
 o estado vale $\textsc{Eval}(s)$, que por padrão é a própria utilidade: $\pm1$
-se o jogo acabou e $0$ caso contrário. Ou seja, o que fica além do horizonte é
-tratado como empate. As jogadas da raiz são avaliadas com profundidade 1:
+se o jogo acabou e $0$ caso contrário, então o que fica além do horizonte conta
+como empate. As jogadas da raiz são avaliadas com profundidade 1:
 
 \begin{center}
 \begin{tabular}{@{}lll@{}}
@@ -150,52 +134,11 @@ completo & até o fim do jogo & joga de forma ótima, nunca perde \\
 \end{tabular}
 \end{center}
 
-Escolhemos a profundidade, e não uma probabilidade de jogada aleatória, porque
-ela é o equivalente ao número de iterações do MCTS: nos dois casos, a
-dificuldade é quanto o agente \emph{pensa} antes de jogar, e o confronto entre
-eles compara o uso desse orçamento.
+Usamos a profundidade, e não uma chance de jogar ao acaso, para que a
+dificuldade do Minimax seja comparável à do MCTS, que é o número de iterações
+(seção~\ref{sec:mcts}).
 
-\section{Implementação}
-
-\gancho{A tradução do aima-python manteve a lógica e mudou só os nomes para o
-estilo do repositório.}
-
-\begin{center}
-\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
-\toprule
-Arquivo & Conteúdo (nome no aima-python) \\
-\midrule
-\texttt{Game.h/.cpp} & \texttt{GameState}, \texttt{Game} e \texttt{playGame} (\texttt{play\_game}) \\
-\texttt{TicTacToe.h/.cpp} & \texttt{TicTacToe} \\
-\texttt{Minimax.h/.cpp} & \texttt{minimaxDecision}, \texttt{alphabetaSearch} e
-  \texttt{alphabetaCutoffSearch} (\texttt{minimax\_decision},
-  \texttt{alphabeta\_search}, \texttt{alphabeta\_cutoff\_search}) \\
-\texttt{MonteCarloTreeSearch.h/.cpp} & \texttt{monteCarloTreeSearch}
-  (\texttt{monte\_carlo\_tree\_search}, com \texttt{MCT\_Node} e \texttt{ucb}
-  do \texttt{utils.py}) \\
-\texttt{Players.h/.cpp} & \texttt{queryPlayer}, \texttt{randomPlayer},
-  \texttt{alphabetaPlayer} e \texttt{mctsPlayer} (\texttt{query\_player},
-  \texttt{random\_player}, \texttt{alphabeta\_player}, \texttt{mcts\_player}) \\
-\bottomrule
-\end{tabularx}
-\end{center}
-
-A única mudança de comportamento é no \texttt{queryPlayer}: ele pede a jogada
-de novo quando ela é inválida. No original, uma jogada inválida não altera o
-estado, mas passa a vez, e o próximo jogador joga com a peça errada.
-
-Os jogadores são escolhidos pela linha de comando, X primeiro:
-\texttt{./build/tictactoe minimax:1 aleatorio}. As opções são \texttt{humano},
-\texttt{aleatorio}, \texttt{minimax} (completo), \texttt{minimax:<d>},
-\texttt{mcts} ($N = 1000$) e \texttt{mcts:<N>}. Cada jogada aparece no
-terminal com o tabuleiro depois dela (por exemplo, \texttt{O (mcts:100) joga
-(2, 2)}), o que permite acompanhar a decisão de cada NPC. Esse log fica no
-\texttt{main.cpp}, que envolve cada jogador; o \texttt{playGame} continua igual
-ao original, que só mostra o estado final.
-
-\section{Resultados do Minimax}
-
-\gancho{Os níveis precisam ser diferentes na prática, não só na teoria.}
+\section{Resultados do Minimax}\label{sec:res-minimax}
 
 Cada nível jogou 200 partidas contra o jogador aleatório como X (primeiro a
 jogar) e 200 como O.
@@ -221,22 +164,10 @@ partidas como O; vendo-a, perde 20. Entre $d = 1$ e $d = 2$ quase não há
 diferença: o lance extra mostra as próprias vitórias um lance adiante, mas
 ainda não chega aos garfos do adversário, que só aparecem olhando mais longe.
 Jogar como O é mais difícil para todos os níveis, já que X começa.
-
 Contra o Minimax completo, $d = 1$ e $d = 2$ empatam jogando como X, e $d = 0$
-perde; jogando como O, todos os níveis limitados perdem. Como os dois lados são
-determinísticos, cada confronto entre níveis do Minimax é sempre a mesma
-partida.
+perde; jogando como O, todos os níveis limitados perdem.
 
-% ---------------------------------------------------------------------------
-% A completar: Monte Carlo Tree Search
-% - seleção (UCB), expansão, simulação e retropropagação
-% - dificuldade pelo número de iterações N
-% - resultados do MCTS contra o jogador aleatório
-
-\section{Monte Carlo Tree Search}
-
-\gancho{O Minimax olha todos os ramos; o MCTS troca essa garantia por
-partidas ao acaso.}
+\section{Monte Carlo Tree Search}\label{sec:mcts}
 
 O MCTS (\texttt{monteCarloTreeSearch}) monta uma árvore a partir do estado
 atual. Cada nó $n$ guarda $U(n)$, o número de vitórias, e $N(n)$, o número de
@@ -294,15 +225,14 @@ visitas. Cada iteração tem quatro etapas:
 \end{algorithm}
 
 No original, a linha que daria $0{,}5$ ao empate está comentada, e mantivemos
-assim: para o MCTS, empatar vale o mesmo que perder. A jogada final é a mais
-visitada, e não a de maior média, porque é a que a seleção mais confirmou.
+assim, então para o MCTS empatar vale o mesmo que perder. A jogada final é a
+mais visitada, e não a de maior média.
 
-\paragraph{Dificuldade.} O equivalente à profundidade $d$ do Minimax é o
-número de iterações $N$: com poucas iterações, a árvore é rasa e as
-estimativas, ruidosas. Na linha de comando, \texttt{mcts} usa o padrão
-$N = 1000$ e \texttt{mcts:<N>} escolhe outro valor.
+\paragraph{Dificuldade.} A dificuldade é o número de iterações $N$ (padrão
+$N = 1000$). Com poucas iterações, a árvore é rasa e as estimativas são
+ruidosas.
 
-\paragraph{Resultados.} Como na seção~6, cada nível jogou 200 partidas contra
+\paragraph{Resultados.} Como na seção~\ref{sec:res-minimax}, cada nível jogou 200 partidas contra
 o jogador aleatório como X e 200 como O.
 
 \begin{center}
@@ -320,24 +250,15 @@ $N = 10000$  & 199 & 1 & 0  & 184 & 9 & 7  \\
 \end{tabular}
 \end{center}
 
-Com $N = 10$, o MCTS mal passa da raiz, e o resultado fica perto do
-Minimax com $d = 0$. A
-partir de $N = 100$, ele não perde mais como X. Como O, vence mais que o
-Minimax completo (183 contra 166 com $N = 1000$), mas ainda perde algumas
-partidas: como o empate não vale nada, ele prefere jogadas que ganham muitas
-simulações aleatórias a jogadas que só garantem o empate. Num teste à parte,
-com a linha do empate descomentada, as derrotas como O caíram para zero com
-$N = 1000$ e $N = 10000$ (178/22/0 e 177/23/0), em troca de menos vitórias.
+Com $N = 10$, o MCTS mal passa da raiz, e o resultado fica perto do Minimax
+com $d = 0$. A partir de $N = 100$, ele não perde mais como X. Como O, vence
+mais que o Minimax completo (183 contra 166 com $N = 1000$), mas ainda perde
+algumas partidas. Como o empate não vale nada, ele prefere jogadas que ganham
+muitas simulações aleatórias a jogadas que só garantem o empate. Num teste à
+parte, dando $0{,}5$ ao empate, as derrotas como O caíram para zero com
+$N = 1000$ e $N = 10000$ (178/22/0 e 177/23/0), mas as vitórias diminuíram.
 
-% A completar: Minimax contra MCTS
-% - partidas entre os níveis de profundidade d e de iterações N,
-%   alternando quem começa
-% - comparação e conclusão
-
-\section{Minimax contra MCTS}
-
-\gancho{Contra o jogador aleatório, quase todos os níveis parecem bons. O teste
-de verdade é um NPC contra o outro.}
+\section{Minimax contra MCTS}\label{sec:confronto}
 
 Cada nível do MCTS jogou contra cada nível do Minimax 100 partidas como X e
 100 como O. O Minimax é determinístico, mas o MCTS não, por isso cada par
@@ -366,39 +287,32 @@ $N = 10000$ & 100/0/0  & 0/100/0  & 0/100/0  & 0/100/0  \\
 \end{tabular}
 \end{center}
 
-Com $N = 10$, o MCTS ainda ganha mais do que perde como X contra os níveis
-com corte, mas como O perde a maioria das partidas para todos eles, e o
-Minimax completo vence 97 das 100 partidas em que o MCTS começa. Com
-$N = 100$, ele já vence $d = 0$ em 197 de 200 partidas e empata a maioria das partidas contra
-$d = 1$ e $d = 2$, mas ainda perde algumas. Com $N = 1000$, não perde para os
-níveis com corte e só perdeu 3 partidas para o Minimax completo, todas como X;
-com $N = 10000$, empata todas contra $d \ge 1$ e vence todas contra $d = 0$.
-As vitórias contra $d = 1$ e $d = 2$ somem com $N = 10000$: quanto mais
-iterações, mais a árvore supõe que o adversário responde bem, e o MCTS deixa
-de arriscar jogadas que só ganham de quem não vê a ameaça.
+Com $N = 10$, o MCTS ganha mais do que perde como X contra os níveis com
+corte, mas como O perde a maioria das partidas para todos os níveis. Com
+$N = 100$, vence $d = 0$ em 197 de 200 partidas e empata a maioria contra
+$d = 1$ e $d = 2$. Com $N = 1000$, não perde para os níveis com corte e perde
+só 3 partidas para o Minimax completo, todas como X. Com $N = 10000$, vence
+todas contra $d = 0$ e empata todas as outras. As vitórias contra $d = 1$ e
+$d = 2$ somem com $N = 10000$ porque, com mais iterações, a árvore passa a
+supor que o adversário responde bem, e o MCTS deixa de tentar jogadas que só
+ganham de quem não vê a ameaça.
 
-\paragraph{Conclusão.} O Minimax completo é ótimo e sempre joga a mesma
-partida, e os seus níveis mudam aos saltos: $d = 0$ não bloqueia, e $d = 1$ e $d = 2$ quase
-não se distinguem. O MCTS não conhece nada além das regras e varia de partida
-para partida; a força dele cresce aos poucos com $N$, o que dá níveis mais
-graduais. Com $N = 10000$, não perdeu para nenhum nível do Minimax, mas
-ainda perdeu 7 de 200 partidas como O contra o jogador aleatório, porque não
-dá valor ao empate.
-No jogo da velha, a árvore é pequena e o Minimax completo é mais simples e
-garantido. O MCTS compensa em jogos maiores, em que a busca completa não cabe
-e não há uma boa função de avaliação para o corte.
+\paragraph{Conclusão.} Os níveis do Minimax mudam aos saltos: $d = 0$ não
+bloqueia, e $d = 1$ e $d = 2$ quase não se distinguem. A força do MCTS cresce
+aos poucos com $N$, o que dá níveis mais graduais. No jogo da velha, porém, a
+árvore é pequena, e o Minimax completo é mais simples e nunca perde. O MCTS faz
+mais sentido em jogos maiores, em que a busca completa não cabe e não há uma
+boa função de avaliação para o corte.
 
 \section{Comparação com FSM e árvore de comportamento}
-
-\gancho{Na autoria de comportamento, o designer escreve as regras. Na busca, o
-NPC só conhece as regras do jogo e descobre sozinho a jogada.}
 
 Uma máquina de estados (FSM) ou uma árvore de comportamento (BT) para o jogo
 da velha seria uma lista de regras em ordem de prioridade, por exemplo um
 seletor com: ganhar se der, bloquear a vitória do adversário, criar um garfo,
 bloquear um garfo, ocupar o centro, um canto e, por fim, um lado. Escritas com
 cuidado, essas regras jogam de forma ótima, porque o jogo da velha é pequeno e
-já está resolvido. Mas quem resolveu foi o designer, não o NPC.
+já está resolvido, mas a estratégia foi pensada pelo designer, e não
+encontrada pelo NPC.
 
 \begin{center}
 \begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X
@@ -420,60 +334,28 @@ Depuração & regra a regra & difícil de explicar uma jogada & difícil de
 \end{tabularx}
 \end{center}
 
-A FSM e a BT dão controle ao designer e custam quase nada para executar, mas
-cada estratégia nova precisa ser escrita à mão, e um erro nas regras vira um
-ponto fraco que o jogador aprende a explorar. O Minimax e o MCTS não têm esse
-problema, porque a estratégia vem da busca; em troca, gastam processamento a
-cada jogada e são mais difíceis de ajustar para um comportamento específico,
-como ``jogar de forma agressiva''. Os níveis também mudam de natureza: numa BT,
-um NPC fácil é um NPC sem algumas regras, enquanto na busca é um NPC que pensa
-menos ($d$ ou $N$ menores).
+Na FSM e na BT, cada estratégia precisa ser escrita à mão, e um erro nas
+regras vira um ponto fraco que o jogador pode explorar. Na busca isso não
+acontece, mas fica mais difícil ajustar o NPC para um comportamento
+específico, como jogar de forma agressiva. As abordagens também podem ser
+combinadas: uma BT ou FSM cuida do roteiro (reagir, provocar o jogador,
+escolher o nível) e chama o Minimax ou o MCTS num nó de ação para escolher a
+jogada.
 
-As abordagens também se combinam. Uma BT ou FSM pode cuidar do que é roteiro,
-como reagir, provocar o jogador ou escolher o nível, e chamar o Minimax ou o
-MCTS num nó de ação quando é hora de decidir a jogada.
+\section{Dificuldades}
 
-\section{Dificuldades e decisões de projeto}
-
-\gancho{Por fim, o que foi escolhido de propósito e o que deu trabalho.}
-
-\paragraph{Decisões.}
-\begin{itemize}
-  \item \textbf{Traduzir o aima-python sem mudar a lógica.} Assim, os
-    algoritmos são os mesmos do livro, e qualquer diferença de comportamento
-    vem do jogo, não da implementação. As únicas mudanças são o
-    \texttt{queryPlayer}, que pede a jogada de novo quando ela é inválida, e o
-    log das jogadas, que fica fora do framework.
-  \item \textbf{Mesma ordem de desempate do Python.} O \texttt{max} do Python
-    devolve o primeiro maior valor. Por isso os filhos de um nó do MCTS ficam
-    num vetor na ordem de \textsc{Actions}, como o dicionário do original, e
-    não num \texttt{std::map}, que os reordenaria.
-  \item \textbf{Dificuldade pelo quanto o NPC pensa} ($d$ e $N$), e não por
-    jogadas aleatórias de propósito, para que os níveis dos dois NPCs sejam
-    comparáveis (seções~4 e~8).
-  \item \textbf{Empate valendo zero no MCTS}, como no original. Isso custa
-    algumas derrotas contra o jogador aleatório (seção~7), mas mudar daria um
-    algoritmo diferente do de referência.
-\end{itemize}
-
-\paragraph{Dificuldades.}
 \begin{itemize}
   \item \textbf{Sorteio repetido no Windows.} No MinGW antigo, o
     \texttt{std::random\_device} devolve sempre a mesma sequência, e todas as
-    partidas do jogador aleatório saíam iguais. A semente passou a misturar o
-    \texttt{random\_device} com o relógio (\texttt{std::seed\_seq}), e o MCTS usa
-    a mesma solução nas simulações.
-  \item \textbf{Detalhes que o Python esconde.} Em C++, $U$ e $N$ precisam ser
-    \texttt{double}: com inteiros, $U/N$ seria uma divisão inteira e o UCB
-    sairia errado. Os nós do MCTS também precisam de dono explícito
-    (\texttt{std::unique\_ptr}), já que não há coletor de lixo.
+    partidas do jogador aleatório e do MCTS saíam iguais. Resolvemos misturando
+    o \texttt{random\_device} com o relógio na semente.
   \item \textbf{Medir um NPC que não é determinístico.} Entre dois Minimax,
     cada confronto é sempre a mesma partida, mas com o MCTS cada par precisou
     de centenas de partidas para os números serem confiáveis.
-  \item \textbf{Um resultado contraintuitivo.} Mesmo com $N = 10000$, o MCTS
-    perdia algumas partidas como O para o jogador aleatório. A explicação era o
-    empate valer zero, e o teste com o empate valendo $0{,}5$ confirmou
-    (seção~7).
+  \item \textbf{As derrotas do MCTS para o jogador aleatório.} Mesmo com
+    $N = 10000$, ele perdia algumas partidas como O. Só entendemos a causa (o
+    empate valer zero) depois do teste com o empate valendo $0{,}5$
+    (seção~\ref{sec:mcts}).
 \end{itemize}
 
 \end{document}

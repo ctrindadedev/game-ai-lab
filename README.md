@@ -4,6 +4,8 @@
  <img align="center" alt="C++" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cplusplus/cplusplus-original.svg" />
  <img align="center" alt="CMake" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cmake/cmake-original.svg" />
  <img align="center" alt="LaTeX" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/latex/latex-original.svg" />
+ <img align="center" alt="Python" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" />
+ <img align="center" alt="Jupyter" height="60" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/jupyter/jupyter-original.svg" />
 </div>
 
 ### Sobre o repositório
@@ -20,3 +22,4 @@ Os projetos nascem das atividades da disciplina **DIM0126 - Inteligência Artifi
 | 2 | [FPSAgentDesign](./FPSAgentDesign) | Projeto de um agente básico de IA para FPS, dividido em percepção, tomada de decisão e movimento |
 | 3 | [BehaviorAuthoring](./BehaviorAuthoring) | Autoria de comportamento: árvore de comportamento do PacMan como NPC e o Enderman (Minecraft) modelado como árvore e como máquina de estados hierárquica |
 | 4 | [TicTacToeAI](./TicTacToeAI) | Jogo da velha com NPCs usando Minimax e Monte Carlo Tree Search, com dificuldade ajustável, partidas entre os dois agentes e relatório comparando-os com FSM e árvore de comportamento |
+| 5 | [QLearningToyText](./QLearningToyText) | Q-learning nos ambientes Toy Text do Gymnasium (FrozenLake, CliffWalking e Taxi), variando taxa de aprendizado, desconto e exploração |

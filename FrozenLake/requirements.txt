@@ -1,0 +1,5 @@
+gymnasium[toy-text]>=1.0
+numpy
+pandas
+matplotlib
+jupyter

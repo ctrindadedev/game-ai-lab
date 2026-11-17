@@ -1,4 +1,4 @@
-"""Núcleo compartilhado do A* no Lago Congelado (Fase 0).
+"""Implementação do A* no Lago Congelado.
 
 O mapa é uma lista de strings no formato do Gymnasium ("S", "F", "H", "G"),
 e uma célula é uma tupla (linha, coluna). Buracos ("H") são intransitáveis.

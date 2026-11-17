@@ -1,4 +1,4 @@
-"""Testes da Fase 0. Rodar com `python teste_astar.py` (ou `pytest`)."""
+"""Testes do A*. Rodar com `python teste_astar.py` (ou `pytest`)."""
 
 import math
 

@@ -1,0 +1,398 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{nosep, leftmargin=*}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\captionsetup{font=small, labelfont=bf}
+\graphicspath{{figuras/}}
+
+% Trechos que ainda dependem dos experimentos de custo.
+\newcommand{\pendente}[1]{\textcolor{red!70!black}{\textbf{[pendente:} #1\textbf{]}}}
+
+\title{\textbf{A* no Lago Congelado: variações de cenário e de custo}\\[0.3em]
+  \large Relatório de experimentos}
+\author{Luisa Ferreira \quad Caio Trindade\\
+  \small Inteligência Artificial para Jogos I --- Aula 27, pathfinding}
+\date{Novembro de 2026}
+
+\begin{document}
+\maketitle
+
+\textbf{Código:} o notebook adaptado, com a implementação, os experimentos e todas as saídas, é o arquivo
+\texttt{frozenlake\_astar.ipynb}. A busca fica no módulo \texttt{astar.py}, os geradores de mapa em
+\texttt{cenarios.py} e as camadas de custo em \texttt{custos.py}. Tudo está disponível em:\\
+\url{https://github.com/ctrindadedev/game-ai-lab/tree/master/FrozenLake}
+
+O ponto de partida é o notebook da disciplina (\texttt{Pratica\_2\_Completa.ipynb}, link do slide 36), que roda o A*
+com distância Manhattan e custo 1 por passo num mapa 8x8. Em aula a busca foi mostrada só nesse cenário simples. Este
+trabalho explora o A* em dois eixos: \textbf{o cenário} (tamanho do grid, posições do início e do objetivo, buracos) e
+\textbf{o custo da rota}, com o Uber como inspiração (terreno, segurança e tráfego).
+
+O A* expande sempre o nó da fronteira com menor
+\[
+f(n) = g(n) + h(n),
+\]
+em que $g(n)$ é o custo real do início até $n$ e $h(n)$ é a estimativa de $n$ até o objetivo. Se $h$ nunca superestima
+o custo real (heurística \emph{admissível}), o primeiro caminho que chega ao objetivo é ótimo. A pergunta do trabalho
+é como o cenário e a função de custo afetam duas coisas: a qualidade do caminho e o esforço da busca.
+
+\section{Ambientes}
+
+\subsection*{FrozenLake-v1 (Lago Congelado), versão determinística}
+
+\begin{itemize}
+  \item \textbf{Estados:} a célula $(\text{linha}, \text{coluna})$ do grid, que no Gymnasium vira o índice
+    $\text{linha} \times n + \text{coluna}$. Os mapas vão de 4x4 (16 estados) a 64x64 (4096 estados).
+  \item \textbf{Ações:} 4, com a mesma numeração do Gymnasium (0 = esquerda, 1 = baixo, 2 = direita, 3 = cima).
+  \item \textbf{Células:} \texttt{S} (início), \texttt{F} (gelo), \texttt{H} (buraco) e \texttt{G} (objetivo). Para a busca,
+    os buracos são intransitáveis, porque cair num deles encerra o episódio.
+  \item \textbf{Função de custo:} no eixo de cenário, cada passo custa 1, como em aula. No eixo de custo, cada passo
+    custa de acordo com as camadas de terreno, segurança e tráfego da célula de destino.
+    \pendente{fórmula final da \texttt{custo\_fn} e faixa de valores}
+  \item \textbf{Reforço do Gymnasium:} $+1$ ao chegar ao \texttt{G} e $0$ nos demais passos. O A* não usa esse reforço
+    para decidir; ele serve só para conferir, no ambiente real, que o caminho planejado chega ao objetivo.
+  \item \textbf{Escorregadio:} desligado (\texttt{is\_slippery=False}). O A* planeja a sequência de ações inteira antes de
+    agir, então precisa que cada ação leve exatamente à célula esperada.
+\end{itemize}
+
+\textbf{Dificuldades e desafios.} A distância Manhattan ignora os buracos. Quanto mais o mapa obriga a desviar, mais
+ela subestima o custo real, e mais nós a busca precisa expandir. Em mapas grandes isso pesa: uma busca sem heurística
+cresce com a área do mapa. Há ainda mapas sem caminho, em que a busca precisa terminar e informar isso. No eixo de custo,
+o desafio passa a ser outro: com passos mais caros que 1, a Manhattan pura subestima demais, e uma heurística
+``esperta'' pode passar a superestimar e quebrar a garantia de otimalidade.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.36\linewidth]{mapa_aula.png}\hspace{1.5em}
+  \includegraphics[width=0.36\linewidth]{mapa_base.png}
+  \caption{À esquerda, o 4x4 da aula (g = 6, como nos slides 18 a 32). À direita, o mapa do notebook base: o G fica
+    logo abaixo do S, mas a fileira de buracos obriga a dar a volta, e o A* expande 38 nós para um caminho de 25
+    passos. Amarelo: células expandidas; vermelho: caminho.}
+  \label{fig:base}
+\end{figure}
+
+\section{Metodologia experimental}
+
+\subsection{Configuração dos experimentos}
+
+\textbf{Implementação.} Cada nó guarda os 4 componentes do slide 35: \textbf{estado} (a célula), \textbf{nó pai},
+\textbf{ação} que levou até ele e \textbf{custo do caminho} $g(n)$. A fronteira (abertos) é uma fila de prioridade
+(\texttt{heapq}) ordenada por $f$. Os empates são desfeitos pelo menor $h$ e, depois, pela ordem de inserção. As células
+expandidas vão para a lista de fechados, e o caminho é reconstruído seguindo os pais a partir do objetivo. A busca
+recebe duas funções, \texttt{custo\_fn(origem, destino)} e \texttt{heuristica\_fn(célula, objetivo)}, e por isso os dois
+eixos usam exatamente o mesmo A*.
+
+\textbf{Parâmetros variados no eixo de cenário} (custo 1 por passo):
+\begin{itemize}
+  \item \textbf{tamanho do grid}: 4, 8, 16, 32 e 64, com 20 mapas do \texttt{generate\_random\_map} ($p = 0{,}8$) por tamanho;
+  \item \textbf{posições de S e G}: seis combinações no mesmo mapa 16x16 (cantos opostos, mesmo lado, centro $\to$
+    canto, canto $\to$ centro, vizinhos na diagonal e objetivo entre buracos);
+  \item \textbf{densidade de buracos}: $p \in \{1{,}0;\ 0{,}9;\ 0{,}8;\ 0{,}7;\ 0{,}65;\ 0{,}6\}$, com 50 mapas 32x32 por valor e
+    \emph{sem} descartar os mapas sem caminho ($p$ é a fração de gelo);
+  \item \textbf{padrões montados à mão}: parede com passagem alinhada, parede com passagem na ponta, armadilha em ``U'',
+    labirinto perfeito 31x31 e o mesmo labirinto com 10\% das paredes abertas;
+  \item \textbf{mapas sem solução}: objetivo cercado por buracos e três mapas de $p = 0{,}6$ sem caminho;
+  \item \textbf{heurísticas}: $h = 0$ (Dijkstra), Manhattan, Euclidiana e Manhattan com peso
+    $w \in \{1{,}5;\ 2;\ 5\}$ (A* ponderado, não admissível).
+\end{itemize}
+
+\textbf{Parâmetros variados no eixo de custo:}
+\pendente{camadas (terreno: asfalto 1, pedregulho 2, barro 3, areia 4; insegurança; tráfego), forma de geração das
+regiões, pesos de cada perfil (mais rápido, mais seguro, equilibrado), heurísticas testadas e número de mapas}
+
+\textbf{Hipóteses iniciais.}
+\begin{enumerate}[label=H\arabic*.]
+  \item A vantagem da Manhattan sobre Dijkstra cresce com o tamanho do mapa.
+  \item A Euclidiana, apesar de admissível, ajuda menos que a Manhattan, porque o agente só anda em 4 direções.
+  \item Mais buracos e obstáculos que exigem desvio pioram a Manhattan.
+  \item O A* ponderado expande menos nós, mas passa a devolver caminhos mais caros.
+  \item Perfis de custo diferentes levam a rotas diferentes no mesmo mapa. \pendente{confirmar no eixo de custo}
+  \item Manhattan multiplicada pelo custo mínimo por célula continua admissível; com o custo médio ou máximo, deixa de
+    ser. \pendente{confirmar no eixo de custo}
+\end{enumerate}
+
+\textbf{Repetições e sementes.} Como o A* é determinístico, a variação vem dos mapas: de 20 a 50 mapas por configuração,
+gerados com semente fixa (\texttt{SEMENTE = 42}) para que tudo seja reproduzível.
+
+\textbf{Critério de parada.} A busca para quando tira o objetivo da fronteira (caminho encontrado) ou quando a fronteira
+esvazia (não há caminho).
+
+\textbf{Ferramentas.} Python 3.12, Gymnasium (\texttt{FrozenLake-v1}), NumPy, pandas, Matplotlib e Jupyter.
+
+\subsection{Procedimentos de execução e avaliação}
+
+Não há treinamento: o A* planeja o caminho completo a partir do mapa e só depois as ações são executadas no ambiente.
+Cada execução passa por três verificações automáticas:
+\begin{enumerate}
+  \item o caminho não passa por buracos e cada passo vai para uma célula vizinha;
+  \item com heurística admissível, o custo é igual ao de Dijkstra ($h = 0$) no mesmo mapa;
+  \item as ações executadas no \texttt{FrozenLake-v1} terminam no \texttt{G} com recompensa 1.
+\end{enumerate}
+A implementação foi conferida antes contra o exemplo da aula (4x4, $g = 6$) e contra o caminho do notebook base, e
+há testes automáticos para isso (\texttt{teste\_astar.py}).
+
+\textbf{Métricas.} Custo do caminho, número de passos, \textbf{nós expandidos} (o esforço da busca), tamanho máximo
+da fronteira (memória) e tempo em ms. Para as heurísticas não admissíveis, a fração de mapas com caminho subótimo e o
+excesso de custo em relação ao ótimo. Os tempos de Python variam entre execuções, então a comparação principal é pelos
+nós expandidos.
+
+\textbf{Visualização.} Tabelas com médias por configuração, gráficos de nós expandidos, desenhos do mapa com as células
+expandidas e o caminho, GIF do agente percorrendo a armadilha em ``U'' e mapas de calor das camadas de custo com a rota
+por cima.
+
+\section{Resultados}
+
+\subsection{Eixo 1: cenário}
+
+\subsubsection*{Tamanho do grid}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Média de 20 mapas por tamanho ($p = 0{,}8$, S e G em cantos opostos). As três heurísticas acham sempre o
+    mesmo custo; muda o esforço.}
+  \label{tab:tamanho}
+  \begin{tabular}{rrrrrrr}
+    \toprule
+    & & \multicolumn{3}{c}{nós expandidos} & \multicolumn{2}{c}{\% das células livres} \\
+    \cmidrule(lr){3-5}\cmidrule(lr){6-7}
+    tamanho & custo & Dijkstra & Manhattan & Euclidiana & Dijkstra & Manhattan \\
+    \midrule
+    4x4   &   6,0 &   11,8 &   6,6 &    8,2 & 90,3 & 51,2 \\
+    8x8   &  14,0 &   49,3 &  17,0 &   35,2 & 94,6 & 32,7 \\
+    16x16 &  30,0 &  206,5 &  43,6 &  165,2 & 98,9 & 20,9 \\
+    32x32 &  62,2 &  813,2 & 123,2 &  695,6 & 99,3 & 15,0 \\
+    64x64 & 126,0 & 3265,4 & 366,2 & 2939,3 & 99,7 & 11,2 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{cenario_64x64.png}
+  \caption{Mesmo mapa 64x64 com as três heurísticas admissíveis. O caminho tem o mesmo custo, mas a Manhattan expande
+    uma faixa estreita em volta dele, enquanto Dijkstra e Euclidiana varrem quase o mapa todo.}
+  \label{fig:64}
+\end{figure}
+
+\subsubsection*{Posições do início e do objetivo}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Mesmo mapa 16x16 com S e G em lugares diferentes.}
+  \label{tab:posicoes}
+  \begin{tabular}{lccrrrr}
+    \toprule
+    posições & S & G & $h(S)$ & custo & Dijkstra & Manhattan \\
+    \midrule
+    cantos opostos         & (0,0)   & (15,15) & 30 & 30 & 202 & 45 \\
+    mesmo lado             & (0,0)   & (0,15)  & 15 & 17 &  96 & 17 \\
+    centro $\to$ canto     & (8,8)   & (15,15) & 14 & 14 & 193 & 23 \\
+    canto $\to$ centro     & (15,15) & (8,8)   & 14 & 14 &  67 & 14 \\
+    vizinhos na diagonal   & (7,7)   & (8,8)   &  2 &  2 &   9 &  2 \\
+    objetivo entre buracos & (0,0)   & (2,5)   &  7 &  7 &  25 & 12 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection*{Densidade de buracos}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{50 mapas 32x32 por valor de $p$, sem filtrar os mapas sem caminho. A Manhattan inicial é sempre 62.
+    As colunas de custo e de nós expandidos usam só os mapas com caminho.}
+  \label{tab:densidade}
+  \begin{tabular}{rrrrrrr}
+    \toprule
+    $p$ & \% com caminho & custo médio & custo / $h(S)$ & Dijkstra & Manhattan & economia (\%) \\
+    \midrule
+    1,00 & 100 & 62,00 & 1,00 & 1023,0 &  62,0 & 93,9 \\
+    0,90 & 100 & 62,00 & 1,00 &  919,2 & 103,1 & 88,8 \\
+    0,80 &  86 & 62,05 & 1,00 &  814,4 & 131,7 & 83,8 \\
+    0,70 &  40 & 63,10 & 1,02 &  691,7 & 181,2 & 73,8 \\
+    0,65 &  26 & 66,31 & 1,07 &  587,4 & 234,8 & 60,0 \\
+    0,60 &   8 & 80,00 & 1,29 &  412,3 & 267,5 & 35,1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{cenario_densidade.png}
+  \caption{À esquerda, a fração de mapas com caminho cai de forma brusca entre $p = 0{,}8$ e $p = 0{,}6$. À direita, os
+    nós expandidos nos mapas com caminho.}
+  \label{fig:densidade}
+\end{figure}
+
+\subsubsection*{Padrões montados à mão e mapas sem solução}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Padrões que isolam casos em que a Manhattan é enganada (nós expandidos).}
+  \label{tab:padroes}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    padrão & $h(S)$ & custo & alcançáveis & Dijkstra & Manhattan & Euclidiana \\
+    \midrule
+    parede, passagem alinhada & 15 &  15 & 241 & 170 &  15 &  15 \\
+    parede, passagem na ponta & 15 &  31 & 241 & 212 & 136 & 178 \\
+    armadilha em U            & 14 &  24 & 231 & 230 & 107 & 181 \\
+    labirinto perfeito        & 60 & 264 & 511 & 346 & 315 & 316 \\
+    labirinto com ciclos      & 60 &  84 & 533 & 514 & 341 & 434 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{cenario_padroes.png}
+  \caption{Padrões de buracos com Dijkstra (em cima) e Manhattan (embaixo). Na armadilha em ``U'' a Manhattan puxa a
+    busca para dentro do U, que fica na direção do G.}
+  \label{fig:padroes}
+\end{figure}
+
+Nos mapas sem solução, toda heurística admissível expandiu exatamente as células alcançáveis a partir de S: 247 no
+mapa 16x16 com o G cercado, e 29, 8 e 493 nos três mapas de $p = 0{,}6$. A Manhattan $\times 2$ expandiu 623 nós no
+mapa do G cercado, mais que o número de células alcançáveis.
+
+\subsubsection*{Heurísticas}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{50 mapas 32x32 do \texttt{generate\_random\_map} com $p = 0{,}8$. Subótimo: custo acima do de Dijkstra.}
+  \label{tab:heuristicas}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    heurística & expandidos & fronteira máx. & \% subótimos & excesso médio (\%) & excesso máx. (\%) \\
+    \midrule
+    nula (Dijkstra)  & 814,8 & 32,4 &   0 &  0,0 &  0,0 \\
+    Manhattan        & 133,4 & 90,4 &   0 &  0,0 &  0,0 \\
+    Euclidiana       & 695,3 & 52,4 &   0 &  0,0 &  0,0 \\
+    Manhattan ×1,5   & 102,2 & 66,5 &  90 &  5,6 & 12,9 \\
+    Manhattan ×2     &  97,7 & 64,4 &  98 &  9,5 & 19,4 \\
+    Manhattan ×5     &  93,5 & 63,9 & 100 & 15,1 & 38,7 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Com $p = 0{,}7$ o comportamento se repete: a Manhattan $\times 1{,}5$ fica subótima em 74\% dos mapas, e o excesso
+máximo chega a 53,1\% com $w = 5$. Nos padrões, só o labirinto com ciclos foi afetado (custo 84 $\to$ 96 com $w = 2$
+e 108 com $w = 5$).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{cenario_heuristicas.png}
+  \caption{Nós expandidos por heurística nos mapas aleatórios 32x32. Entre parênteses, a fração de mapas em que o
+    caminho saiu mais caro que o ótimo.}
+  \label{fig:heuristicas}
+\end{figure}
+
+\subsection{Eixo 2: custo inspirado no Uber}
+
+\pendente{mapas de calor das camadas com as rotas; tabela de custo, passos e nós expandidos por perfil de peso;
+tabela de heurísticas admissíveis $\times$ não admissíveis com custo variável}
+
+\subsection*{Análise qualitativa}
+
+\textbf{Busca com custo 1.} Num mapa aberto, a Manhattan segue quase em linha até o objetivo. Graças ao desempate pelo
+menor $h$, no mapa sem buracos ela expande exatamente os 62 nós do caminho. Quando aparece um obstáculo na direção do
+objetivo, a busca ``bate'' nele e preenche a região à frente antes de contornar. Na armadilha em ``U'' (GIF no notebook)
+isso fica visível: a busca enche o interior do U antes de sair pela abertura. Dijkstra, ao contrário, cresce como uma
+onda uniforme em todas as direções, sem se importar com onde está o objetivo.
+
+\textbf{Busca com custo variável.} \pendente{comportamento das rotas de cada perfil: desvios de regiões perigosas ou
+congestionadas, troca de distância por segurança etc.}
+
+\section{Discussão}
+
+\textbf{Hipóteses confirmadas.}
+\begin{itemize}
+  \item \textbf{H1, confirmada.} Dijkstra expande praticamente todas as células livres (de 90\% no 4x4 a 99,7\% no
+    64x64), então o trabalho cresce com a área do mapa ($n^2$). Com a Manhattan, o trabalho cresce perto do comprimento
+    do caminho: 366 nós para 126 passos no 64x64, ou seja, 11\% das células livres. No 64x64, o tempo cai de cerca de
+    10 ms para 1,5 ms.
+  \item \textbf{H2, confirmada.} A Euclidiana expande 90\% das células no 64x64, quase tanto quanto Dijkstra. De (0,0)
+    a (31,31) ela estima 43,8 para um custo de 62. Ser admissível garante o caminho ótimo, mas não diz nada sobre
+    eficiência. Para isso, a heurística precisa ficar perto do custo real.
+  \item \textbf{H3, confirmada.} Com mais buracos, a economia da Manhattan cai de 94\% ($p = 1$) para 35\% ($p = 0{,}6$).
+    Nos padrões, ela é exata com a passagem alinhada (15 nós), mas com a passagem na ponta a estimativa é metade do custo
+    e a busca varre a metade esquerda do mapa (136 nós). No labirinto perfeito ela quase não ajuda (315 contra 346).
+  \item \textbf{H4, confirmada.} A Manhattan $\times 1{,}5$ expande 23\% menos nós que a Manhattan, mas em 90\% dos mapas
+    devolveu um caminho mais caro. Aumentar o peso quase não economiza mais nós depois de $w = 1{,}5$ e só piora o
+    caminho.
+  \item \textbf{H5 e H6.} \pendente{eixo de custo}
+\end{itemize}
+
+\textbf{O comportamento faz sentido com a teoria?} Sim. O A* expande todos os nós com $f(n) <$ custo ótimo, então quanto
+mais $h$ subestima, mais nós entram nessa faixa. Isso explica por que a Euclidiana e a Manhattan diante de obstáculos
+expandem mais. Com peso $w$, o custo encontrado ficou sempre abaixo do limite teórico do A* ponderado
+($\text{custo} \le w \times \text{ótimo}$), e o pior caso foi 53\% acima do ótimo com $w = 5$, bem abaixo dos 400\%
+permitidos. Nos mapas sem caminho, nenhuma heurística admissível ajuda, porque a busca só pode parar depois de provar
+que o objetivo é inalcançável, e isso exige visitar toda a região conexa de S. Com a heurística que superestima foi pior
+(623 expansões para 247 células), porque o A* fecha células por caminhos ruins e precisa reabri-las depois.
+
+Dois resultados não eram esperados. Primeiro, a posição relativa importa tanto quanto a distância: ``centro $\to$
+canto'' e ``canto $\to$ centro'' têm o mesmo custo, mas Dijkstra expande 193 nós num sentido e 67 no outro, porque a
+partir do canto a busca só tem um quadrante para crescer. Segundo, a fração de mapas com caminho cai de 86\% para 8\%
+entre $p = 0{,}8$ e $p = 0{,}6$, coerente com o limiar de percolação da grade quadrada (cerca de 59\% de células livres).
+O \texttt{generate\_random\_map} do Gymnasium esconde essa transição, porque descarta os mapas sem caminho.
+
+\pendente{discussão do eixo de custo: admissibilidade com custos variáveis, trade-off entre perfis}
+
+\textbf{Limitações.}
+\begin{itemize}
+  \item No eixo de cenário, o custo é 1 por passo e o movimento é em 4 direções. Nesse caso a Manhattan é a melhor
+    heurística possível sem obstáculos, e por isso ela parece tão boa.
+  \item O ambiente é usado com \texttt{is\_slippery=False}. No lago escorregadio, a ação nem sempre leva à célula
+    planejada, e o A* precisaria replanejar a cada passo ou ser trocado por uma abordagem para ambientes estocásticos,
+    como o Q-learning da atividade anterior.
+  \item O número de nós expandidos depende da regra de desempate (aqui, menor $h$). Com outra regra, os valores mudam,
+    principalmente em mapas abertos.
+  \item Os tempos são de Python e variam entre execuções; as conclusões se apoiam nos nós expandidos.
+  \item \pendente{limitações do modelo de custo (camadas sintéticas, tráfego estático etc.)}
+\end{itemize}
+
+\textbf{Melhorias possíveis.} Verificar antes se S e G estão na mesma região conexa (componentes pré-calculados), o que
+evita a busca exaustiva nos mapas sem caminho. Usar heurísticas que conhecem os obstáculos, como distâncias
+pré-calculadas a pontos de referência (\emph{landmarks}) ou um grafo de regiões para busca hierárquica. Permitir
+movimento em 8 direções, em que a distância octil faz o papel da Manhattan. \pendente{melhorias do eixo de custo}
+
+\section{Conclusões}
+
+\begin{itemize}
+  \item Uma heurística admissível garante o caminho ótimo, mas o ganho de eficiência depende de o quanto ela se
+    aproxima do custo real. A Manhattan reduziu as expansões em até 89\% no 64x64; a Euclidiana, igualmente
+    admissível, quase não ajudou.
+  \item O formato do mapa pesa mais que o tamanho: paredes, armadilhas em ``U'' e labirintos fazem a Manhattan errar
+    feio, e nesses casos o A* volta a se comportar quase como Dijkstra.
+  \item Mapas sem caminho são o pior caso: a busca precisa visitar toda a região alcançável, qualquer que seja a
+    heurística admissível.
+  \item O A* ponderado é uma troca explícita entre velocidade e qualidade. Aqui, $w = 1{,}5$ já capturou quase todo o
+    ganho de velocidade, e pesos maiores só pioraram o caminho.
+  \item \pendente{conclusões do eixo de custo}
+\end{itemize}
+
+\textbf{Próximos passos.} Testar o A* no lago escorregadio com replanejamento a cada passo, comparar com o Q-learning
+da atividade anterior no mesmo mapa, e experimentar heurísticas com \emph{landmarks} em mapas com muitos obstáculos.
+\pendente{próximos passos do eixo de custo}
+
+\end{document}

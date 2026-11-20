@@ -23,3 +23,5 @@ Os projetos nascem das atividades da disciplina **DIM0126 - Inteligência Artifi
 | 3 | [BehaviorAuthoring](./BehaviorAuthoring) | Autoria de comportamento: árvore de comportamento do PacMan como NPC e o Enderman (Minecraft) modelado como árvore e como máquina de estados hierárquica |
 | 4 | [TicTacToeAI](./TicTacToeAI) | Jogo da velha com NPCs usando Minimax e Monte Carlo Tree Search, com dificuldade ajustável, partidas entre os dois agentes e relatório comparando-os com FSM e árvore de comportamento |
 | 5 | [QLearningToyText](./QLearningToyText) | Q-learning nos ambientes Toy Text do Gymnasium (FrozenLake, CliffWalking e Taxi), variando taxa de aprendizado, desconto e exploração |
+| 6 | [RomaniaAStar](./RomaniaAStar) | Execução passo a passo do A* no mapa da Romênia, de Arad a Bucharest, usando a distância em linha reta como heurística |
+| 7 | [FrozenLake](./FrozenLake) | A* no Lago Congelado variando tamanho, posições e buracos do mapa, com custo de rota inspirado no Uber (terreno, segurança e tráfego) e relatório de experimentos |

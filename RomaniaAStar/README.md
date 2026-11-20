@@ -20,12 +20,20 @@ e chegando a **Bucharest**.
 | Arquivo | Conteúdo | Situação |
 |---|---|---|
 | `romenia.py` | Estradas, distâncias e tabela h transcritas do slide | pronto |
-| `astar_romenia.py` | A* que imprime OPEN, CLOSED e f/g/h a cada iteração, para conferir a execução manual | a fazer |
-| `passo_a_passo.tex` | Documento de entrega com a execução iteração por iteração | esqueleto |
+| `astar_romenia.py` | A* que imprime OPEN, CLOSED e f/g/h a cada iteração, para conferir a execução manual | pronto |
+| `passo_a_passo.tex` | Documento de entrega com a execução iteração por iteração | pronto |
 
 ## Como rodar
 
 ```bash
 python romenia.py        # confere a transcrição do grafo
+python astar_romenia.py  # A* passo a passo, com OPEN e CLOSED a cada iteração
 pdflatex passo_a_passo.tex
 ```
+
+## Resultado
+
+Caminho **Arad → Sibiu → Rimnicu Vilcea → Pitesti → Bucharest**, com custo **418 km**,
+em 6 iterações (5 expansões). Bucharest entra em `OPEN` pela primeira vez via Fagaras
+(g = 450), mas a busca só termina quando ele sai de `OPEN`; antes disso, a expansão de
+Pitesti (f = 417) encontra o caminho de 418 e atualiza o registro.

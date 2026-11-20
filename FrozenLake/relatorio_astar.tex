@@ -95,50 +95,34 @@ o desafio passa a ser outro: com passos mais caros que 1, a Manhattan pura subes
 
 \subsection{Configuração dos experimentos}
 
-\textbf{Implementação.} Cada nó guarda os 4 componentes do slide 35: \textbf{estado} (a célula), \textbf{nó pai},
-\textbf{ação} que levou até ele e \textbf{custo do caminho} $g(n)$. A fronteira (abertos) é uma fila de prioridade
-(\texttt{heapq}) ordenada por $f$. Os empates são desfeitos pelo menor $h$ e, depois, pela ordem de inserção. As células
-expandidas vão para a lista de fechados, e o caminho é reconstruído seguindo os pais a partir do objetivo. A busca
-recebe duas funções, \texttt{custo\_fn(origem, destino)} e \texttt{heuristica\_fn(célula, objetivo)}, e por isso os dois
-eixos usam exatamente o mesmo A*.
+\textbf{Implementação.} O A* segue a estrutura de nó do slide 35 (estado, nó pai, ação e $g(n)$), com fronteira em
+fila de prioridade ordenada por $f$ e empates desfeitos pelo menor $h$. Ele recebe a função de custo e a heurística
+como parâmetros, e por isso os dois eixos usam a mesma busca. Os detalhes estão no código (\texttt{astar.py},
+\texttt{cenarios.py} e \texttt{custos.py}, no link do início).
 
-\textbf{Parâmetros variados no eixo de cenário} (custo 1 por passo):
+\textbf{Eixo de cenário} (custo 1 por passo):
 \begin{itemize}
-  \item \textbf{tamanho do grid}: 4, 8, 16, 32 e 64, com 20 mapas do \texttt{generate\_random\_map} ($p = 0{,}8$) por tamanho;
-  \item \textbf{posições de S e G}: seis combinações no mesmo mapa 16x16 (cantos opostos, mesmo lado, centro $\to$
-    canto, canto $\to$ centro, vizinhos na diagonal e objetivo entre buracos);
-  \item \textbf{densidade de buracos}: $p \in \{1{,}0;\ 0{,}9;\ 0{,}8;\ 0{,}7;\ 0{,}65;\ 0{,}6\}$, com 50 mapas 32x32 por valor e
-    \emph{sem} descartar os mapas sem caminho ($p$ é a fração de gelo);
-  \item \textbf{padrões montados à mão}: parede com passagem alinhada, parede com passagem na ponta, armadilha em ``U'',
-    labirinto perfeito 31x31 e o mesmo labirinto com 10\% das paredes abertas;
-  \item \textbf{mapas sem solução}: objetivo cercado por buracos e três mapas de $p = 0{,}6$ sem caminho;
-  \item \textbf{heurísticas}: $h = 0$ (Dijkstra), Manhattan, Euclidiana e Manhattan com peso
-    $w \in \{1{,}5;\ 2;\ 5\}$ (A* ponderado, não admissível).
+  \item \textbf{tamanho}: 4, 8, 16, 32 e 64, com 20 mapas aleatórios ($p = 0{,}8$) por tamanho;
+  \item \textbf{posições de S e G}: seis combinações no mesmo mapa 16x16;
+  \item \textbf{densidade de buracos}: $p$ de 1,0 a 0,6 (fração de gelo), 50 mapas 32x32 por valor, mantendo os mapas
+    sem caminho;
+  \item \textbf{padrões à mão}: paredes com passagem, armadilha em ``U'' e labirinto 31x31, além de mapas sem solução;
+  \item \textbf{heurísticas}: $h = 0$ (Dijkstra), Manhattan, Euclidiana e Manhattan com peso $w \in \{1{,}5;\ 2;\ 5\}$.
 \end{itemize}
 
-\textbf{Parâmetros variados no eixo de custo} (módulo \texttt{custos.py}):
+\textbf{Eixo de custo} (inspirado no Uber). Cada camada é sorteada por bairros (regiões de Voronoi), com divisões
+independentes:
 \begin{itemize}
-  \item \textbf{camadas}, geradas por bairros (regiões de Voronoi: cada célula pertence à semente mais próxima), cada
-    camada com a sua própria divisão, para que piso, risco e trânsito não andem juntos:
-    \begin{itemize}
-      \item \emph{terreno}: um piso por bairro, asfalto (1, 45\% dos bairros), pedregulho (2), barro (3) e areia (4);
-      \item \emph{insegurança}: ocorrências policiais por bairro (Poisson com média sorteada por bairro, de cauda
-        longa), convertidas em penalidade de 1 ponto a cada 5 ocorrências, limitada a 5;
-      \item \emph{tráfego}: intensidade de 0 a 0,6 por bairro e 1 nas avenidas (linhas e colunas inteiras de
-        asfalto), convertida em penalidade conforme o \textbf{horário}: $0{,}5 + 3 \times$ intensidade no pico,
-        $1{,}5 \times$ no horário normal e $0{,}3 \times$ de madrugada;
-    \end{itemize}
-  \item \textbf{perfis de peso} $(w_t, w_s, w_{tr})$: mais rápido $(1;\ 0;\ 1)$, mais seguro $(0{,}3;\ 2;\ 0{,}3)$ e
-    equilibrado $(1;\ 0{,}7;\ 0{,}7)$;
-  \item \textbf{variável extra criada por nós, a chuva}: o barro passa de 3 para 6, o pedregulho de 2 para 2,5 e o
-    trânsito aumenta 50\%;
-  \item \textbf{heurísticas}, todas da forma fator $\times$ Manhattan: Manhattan pura (fator 1), Manhattan $\times$
-    cmin (menor custo de passo do mapa, admissível), Manhattan $\times$ custo médio, Manhattan $\times$ custo máximo e
-    $2 \times$ Manhattan $\times$ cmin;
-  \item \textbf{mapas}: um mapa de vitrine 20x20 (90\% de gelo, S e G nas pontas da linha do meio) e 90 mapas para as
-    médias: 16x16, 24x24 e 32x32, 15 sementes por tamanho, 90\% de gelo, com S e G em cantos opostos ou nas pontas
-    da linha do meio. As camadas usam a mesma semente do mapa.
+  \item \textbf{terreno}: asfalto (1), pedregulho (2), barro (3) e areia (4);
+  \item \textbf{insegurança}: ocorrências policiais por bairro, convertidas em penalidade de 0 a 5;
+  \item \textbf{tráfego}: intensidade por bairro e avenidas, com penalidade que muda com o \textbf{horário} (pico,
+    normal, madrugada);
+  \item \textbf{chuva} (variável extra): encarece barro, pedregulho e trânsito.
 \end{itemize}
+O custo de um passo é a soma ponderada das camadas, com três \textbf{perfis} $(w_t, w_s, w_{tr})$: mais rápido
+$(1;\ 0;\ 1)$, mais seguro $(0{,}3;\ 2;\ 0{,}3)$ e equilibrado $(1;\ 0{,}7;\ 0{,}7)$. As heurísticas são da forma
+fator $\times$ Manhattan, com fator 1, cmin (menor custo de passo do mapa), custo médio, custo máximo e $2 \times$ cmin.
+Usamos um mapa de vitrine 20x20 e 90 mapas (16x16, 24x24 e 32x32, 15 sementes cada) para as médias.
 
 \textbf{Hipóteses iniciais.}
 \begin{enumerate}[label=H\arabic*.]
@@ -151,34 +135,23 @@ eixos usam exatamente o mesmo A*.
     ser.
 \end{enumerate}
 
-\textbf{Repetições e sementes.} Como o A* é determinístico, a variação vem dos mapas: de 20 a 50 mapas por configuração,
-gerados com semente fixa (\texttt{SEMENTE = 42}) para que tudo seja reproduzível.
-
-\textbf{Critério de parada.} A busca para quando tira o objetivo da fronteira (caminho encontrado) ou quando a fronteira
-esvazia (não há caminho).
-
-\textbf{Ferramentas.} Python 3.12, Gymnasium (\texttt{FrozenLake-v1}), NumPy, pandas, Matplotlib e Jupyter.
+\textbf{Repetições, parada e ferramentas.} O A* é determinístico, então a variação vem dos mapas: de 20 a 50 por
+configuração, com semente fixa (42). A busca para ao tirar o objetivo da fronteira ou quando ela esvazia. Usamos
+Python 3.12, Gymnasium (\texttt{FrozenLake-v1}), NumPy, pandas, Matplotlib e Jupyter.
 
 \subsection{Procedimentos de execução e avaliação}
 
-Não há treinamento: o A* planeja o caminho completo a partir do mapa e só depois as ações são executadas no ambiente.
-Cada execução passa por três verificações automáticas:
-\begin{enumerate}
-  \item o caminho não passa por buracos e cada passo vai para uma célula vizinha;
-  \item com heurística admissível, o custo é igual ao de Dijkstra ($h = 0$) no mesmo mapa;
-  \item as ações executadas no \texttt{FrozenLake-v1} terminam no \texttt{G} com recompensa 1.
-\end{enumerate}
-A implementação foi conferida antes contra o exemplo da aula (4x4, $g = 6$) e contra o caminho do notebook base, e
-há testes automáticos para isso (\texttt{teste\_astar.py}).
+Não há treinamento: o A* planeja o caminho a partir do mapa e as ações são executadas depois no ambiente. Em toda
+execução conferimos que o caminho é válido, que o custo com heurística admissível é igual ao de Dijkstra e que as ações
+levam ao \texttt{G} no \texttt{FrozenLake-v1}. A implementação também foi conferida contra o exemplo da aula (4x4,
+$g = 6$) em \texttt{teste\_astar.py}.
 
-\textbf{Métricas.} Custo do caminho, número de passos, \textbf{nós expandidos} (o esforço da busca), tamanho máximo
-da fronteira (memória) e tempo em ms. Para as heurísticas não admissíveis, a fração de mapas com caminho subótimo e o
-excesso de custo em relação ao ótimo. Os tempos de Python variam entre execuções, então a comparação principal é pelos
-nós expandidos.
+\textbf{Métricas.} Custo, passos, \textbf{nós expandidos} (a principal, já que os tempos de Python variam), tamanho
+máximo da fronteira e tempo. Nas heurísticas não admissíveis, a fração de mapas com caminho subótimo e o excesso de
+custo.
 
-\textbf{Visualização.} Tabelas com médias por configuração, gráficos de nós expandidos, desenhos do mapa com as células
-expandidas e o caminho, GIF do agente percorrendo a armadilha em ``U'' e mapas de calor das camadas de custo com a rota
-por cima.
+\textbf{Visualização.} Tabelas de médias, gráficos de nós expandidos, mapas com as células expandidas e o caminho, um
+GIF da armadilha em ``U'' e mapas de calor das camadas com a rota por cima.
 
 \section{Resultados}
 
@@ -562,118 +535,59 @@ Dijkstra, em vez da faixa estreita que a Manhattan expandia com custo 1.
 
 \section{Discussão}
 
-\textbf{Hipóteses confirmadas.}
+\textbf{Hipóteses.} Todas as seis foram confirmadas.
 \begin{itemize}
-  \item \textbf{H1, confirmada.} Dijkstra expande praticamente todas as células livres (de 90\% no 4x4 a 99,7\% no
-    64x64), então o trabalho cresce com a área do mapa ($n^2$). Com a Manhattan, o trabalho cresce perto do comprimento
-    do caminho: 366 nós para 126 passos no 64x64, ou seja, 11\% das células livres. No 64x64, o tempo cai de cerca de
-    10 ms para 1,5 ms.
-  \item \textbf{H2, confirmada.} A Euclidiana expande 90\% das células no 64x64, quase tanto quanto Dijkstra. De (0,0)
-    a (31,31) ela estima 43,8 para um custo de 62. Ser admissível garante o caminho ótimo, mas não diz nada sobre
-    eficiência. Para isso, a heurística precisa ficar perto do custo real.
-  \item \textbf{H3, confirmada.} Com mais buracos, a economia da Manhattan cai de 94\% ($p = 1$) para 35\% ($p = 0{,}6$).
-    Nos padrões, ela é exata com a passagem alinhada (15 nós), mas com a passagem na ponta a estimativa é metade do custo
-    e a busca varre a metade esquerda do mapa (136 nós). No labirinto perfeito ela quase não ajuda (315 contra 346).
-  \item \textbf{H4, confirmada.} A Manhattan $\times 1{,}5$ expande 23\% menos nós que a Manhattan, mas em 90\% dos mapas
-    devolveu um caminho mais caro. Aumentar o peso quase não economiza mais nós depois de $w = 1{,}5$ e só piora o
-    caminho.
-  \item \textbf{H5, confirmada.} No mapa de vitrine, os três perfis fazem três rotas diferentes (25, 29 e 27 passos), e
-    cada uma é a mais barata só no próprio perfil (Tabela~\ref{tab:cruzada}). Nos 90 mapas, pelo menos dois perfis
-    divergem em 100\% dos mapas com S e G em cantos opostos. A exceção é o 16x16 com S e G na mesma linha, em que os
-    três só divergem em 13\% dos mapas: o mapa é pequeno e desviar custa passos demais.
-  \item \textbf{H6, confirmada.} Com Manhattan e Manhattan $\times$ cmin, o custo foi igual ao de Dijkstra em todas as
-    540 execuções admissíveis e nas execuções de horário e chuva. A Manhattan $\times$ média ficou subótima em 74\% a
-    78\% dos mapas, e a Manhattan $\times$ máx., em 91\% a 93\%, com excesso de até 87\%. A quebra não acontece em
-    todos os mapas: depende de o fator passar do custo real do resto do caminho, e por isso a Manhattan $\times$ média
-    ainda acerta em cerca de ¼ dos casos.
+  \item \textbf{H1.} Dijkstra expande quase todas as células livres, e o trabalho cresce com a área. Com a Manhattan,
+    cresce perto do comprimento do caminho: no 64x64, 11\% das células livres.
+  \item \textbf{H2.} A Euclidiana expande 90\% das células no 64x64. Ser admissível garante o ótimo, mas a eficiência
+    depende de a heurística ficar perto do custo real.
+  \item \textbf{H3.} Com mais buracos, a economia da Manhattan cai de 94\% para 35\%. No labirinto, ela quase não ajuda.
+  \item \textbf{H4.} Com $w = 1{,}5$, o A* expande 23\% menos nós, mas devolve caminho mais caro em 90\% dos mapas.
+  \item \textbf{H5.} Os três perfis fazem rotas diferentes no mesmo mapa, e cada uma só é a mais barata no próprio
+    perfil (Tabela~\ref{tab:cruzada}).
+  \item \textbf{H6.} Manhattan e Manhattan $\times$ cmin acertaram o ótimo em todas as execuções. Com o custo médio e
+    o máximo, o caminho foi subótimo em 74\% a 93\% dos mapas.
 \end{itemize}
 
-\textbf{O comportamento faz sentido com a teoria?} Sim. O A* expande todos os nós com $f(n) <$ custo ótimo, então quanto
-mais $h$ subestima, mais nós entram nessa faixa. Isso explica por que a Euclidiana e a Manhattan diante de obstáculos
-expandem mais. Com peso $w$, o custo encontrado ficou sempre abaixo do limite teórico do A* ponderado
-($\text{custo} \le w \times \text{ótimo}$), e o pior caso foi 53\% acima do ótimo com $w = 5$, bem abaixo dos 400\%
-permitidos. Nos mapas sem caminho, nenhuma heurística admissível ajuda, porque a busca só pode parar depois de provar
-que o objetivo é inalcançável, e isso exige visitar toda a região conexa de S. Com a heurística que superestima foi pior
-(623 expansões para 247 células), porque o A* fecha células por caminhos ruins e precisa reabri-las depois.
+\textbf{O comportamento faz sentido com a teoria?} Sim. O A* expande todo nó com $f(n)$ menor que o custo ótimo, então
+quanto mais $h$ subestima, mais nós ele expande; isso explica a Euclidiana e a Manhattan diante de obstáculos. O A*
+ponderado ficou sempre dentro do limite $\text{custo} \le w \times \text{ótimo}$. Nos mapas sem caminho, nenhuma
+heurística ajuda, porque é preciso visitar toda a região alcançável para provar que não há solução. Dois resultados
+não eram esperados: a direção importa (``centro $\to$ canto'' e ``canto $\to$ centro'' têm o mesmo custo, mas Dijkstra
+expande 193 nós contra 67), e a fração de mapas com caminho despenca entre $p = 0{,}8$ e $0{,}6$, perto do limiar de
+percolação da grade, algo que o \texttt{generate\_random\_map} esconde ao descartar mapas sem caminho.
 
-Dois resultados não eram esperados. Primeiro, a posição relativa importa tanto quanto a distância: ``centro $\to$
-canto'' e ``canto $\to$ centro'' têm o mesmo custo, mas Dijkstra expande 193 nós num sentido e 67 no outro, porque a
-partir do canto a busca só tem um quadrante para crescer. Segundo, a fração de mapas com caminho cai de 86\% para 8\%
-entre $p = 0{,}8$ e $p = 0{,}6$, coerente com o limiar de percolação da grade quadrada (cerca de 59\% de células livres).
-O \texttt{generate\_random\_map} do Gymnasium esconde essa transição, porque descarta os mapas sem caminho.
-
-\textbf{Trade-off entre perfis.} Não existe ``melhor rota'' sem dizer antes o que se quer minimizar, e os pesos fazem
-exatamente isso. Comparado ao mais rápido, o mais seguro reduz a insegurança acumulada em 31\%, mas anda 4\% a mais,
-pega 19\% a mais de terreno ruim e 14\% a mais de trânsito. O equilibrado reduz a insegurança em 20\% com o mesmo
-número de passos e quase o mesmo terreno (+2\%), então é um bom acordo. Entre as variáveis, a insegurança é a que mais
-muda as rotas, porque se concentra em poucos bairros com penalidade alta. O terreno pesa menos, porque quase sempre há
-asfalto por perto. O horário muda a rota do perfil mais rápido em 78\% dos mapas, e a chuva aumenta o custo em 35\%
-para o perfil mais rápido, mas só 9\% para o mais seguro, que dá pouco peso ao terreno.
-
-\textbf{Admissibilidade com custos variáveis.} Continuar admissível ficou caro. A Manhattan pura estima só 23\% a 32\%
-do custo real a partir de S e economiza cerca de 10\% dos nós em relação a Dijkstra, contra 89\% no eixo de cenário.
-A Manhattan $\times$ cmin é a melhor admissível testada, mas economiza só cerca de 20\%, porque o cmin (1,6 a 1,7)
-fica muito abaixo do custo médio de um passo (3,5 a 5,5): a heurística precisa supor que o resto do caminho será todo
-pelo bairro mais barato do mapa. Esse valor depende do horário: de madrugada o cmin cai para 1,0 no perfil mais rápido,
-e aí a Manhattan $\times$ cmin vira a Manhattan pura. Do outro lado, as heurísticas que superestimam cortam de 5 a 13
-vezes os nós expandidos, mas devolvem rotas piores na maioria dos mapas. A $2 \times$ Manhattan $\times$ cmin é o meio-termo
-com garantia: o custo nunca passa de 2$\times$ o ótimo, e na prática o excesso máximo foi de 20\%. É a mesma troca do
-A* ponderado no eixo de cenário, só que mais forte: com custos heterogêneos, a distância entre a melhor heurística
-admissível e o custo real cresce, e a vantagem de superestimar aumenta.
+\textbf{Custo variável.} Não existe ``melhor rota'' sem dizer o que minimizar: o perfil mais seguro reduz a
+insegurança em 31\% andando só 4\% a mais, e o equilibrado fica no meio-termo. A insegurança é a variável que mais muda
+as rotas, por se concentrar em poucos bairros. O preço é na heurística: com custos heterogêneos, a melhor admissível
+(Manhattan $\times$ cmin) economiza só cerca de 20\% dos nós, contra 89\% no eixo de cenário, enquanto as que
+superestimam são de 5 a 13 vezes mais rápidas, mas erram a rota. A $2 \times$ cmin é um meio-termo com garantia de no
+máximo o dobro do ótimo, e na prática errou no máximo 20\%.
 
 \textbf{Limitações.}
 \begin{itemize}
-  \item No eixo de cenário, o custo é 1 por passo e o movimento é em 4 direções. Nesse caso a Manhattan é a melhor
-    heurística possível sem obstáculos, e por isso ela parece tão boa.
-  \item O ambiente é usado com \texttt{is\_slippery=False}. No lago escorregadio, a ação nem sempre leva à célula
-    planejada, e o A* precisaria replanejar a cada passo ou ser trocado por uma abordagem para ambientes estocásticos,
-    como o Q-learning da atividade anterior.
-  \item O número de nós expandidos depende da regra de desempate (aqui, menor $h$). Com outra regra, os valores mudam,
-    principalmente em mapas abertos.
-  \item Os tempos são de Python e variam entre execuções; as conclusões se apoiam nos nós expandidos.
-  \item As camadas de custo são sintéticas, e os pesos e as conversões (5 ocorrências = 1 ponto, base e escala do
-    trânsito) foram escolhidos por nós, sem calibração com dados reais. Os resultados mostram tendências, não valores
-    do mundo real.
-  \item A soma ponderada escolhe um único ponto da fronteira de Pareto entre tempo, segurança e conforto. Um
-    aplicativo real mostraria várias rotas e deixaria o usuário escolher.
-  \item O trânsito é fixo durante a viagem. Num modelo mais realista, o custo dependeria da hora de chegada a cada
-    célula, e o estado do A* teria de incluir o tempo.
-  \item O custo de curva ficou de fora: a \texttt{custo\_fn(origem, destino)} não sabe de onde o agente veio, e
-    modelar isso exigiria o estado (célula, direção).
-  \item O Gymnasium não conhece os custos. Ele só confirma que a rota chega ao G, e a otimalidade é conferida pela
-    comparação com Dijkstra.
+  \item O ambiente é determinístico (\texttt{is\_slippery=False}); no lago escorregadio, o A* precisaria replanejar.
+  \item No eixo de cenário, com custo 1 e 4 direções, a Manhattan é a melhor heurística possível sem obstáculos.
+  \item As camadas e os pesos são sintéticos, escolhidos por nós: os resultados mostram tendências, não valores reais.
+  \item O trânsito é fixo durante a viagem e não há custo de curva; modelar isso exigiria tempo e direção no estado.
+  \item O número de nós expandidos depende da regra de desempate.
 \end{itemize}
 
-\textbf{Melhorias possíveis.} Verificar antes se S e G estão na mesma região conexa (componentes pré-calculados), o que
-evita a busca exaustiva nos mapas sem caminho. Usar heurísticas que conhecem os obstáculos, como distâncias
-pré-calculadas a pontos de referência (\emph{landmarks}) ou um grafo de regiões para busca hierárquica. Permitir
-movimento em 8 direções, em que a distância octil faz o papel da Manhattan. No eixo de custo, a principal melhoria
-seria uma heurística admissível mais próxima do custo real, por exemplo um Dijkstra reverso a partir do G (exato,
-mas caro quando o G muda) ou \emph{landmarks} calculados sobre a grade de custos, em vez de multiplicar a Manhattan por
-um único fator para o mapa inteiro.
+\textbf{Melhorias possíveis.} Checar antes se S e G estão na mesma região conexa, evitando a busca exaustiva nos mapas
+sem caminho; usar heurísticas que conhecem obstáculos e custos, como \emph{landmarks}; e permitir 8 direções com a
+distância octil.
 
 \section{Conclusões}
 
 \begin{itemize}
-  \item Uma heurística admissível garante o caminho ótimo, mas o ganho de eficiência depende de o quanto ela se
-    aproxima do custo real. A Manhattan reduziu as expansões em até 89\% no 64x64; a Euclidiana, igualmente
-    admissível, quase não ajudou.
-  \item O formato do mapa pesa mais que o tamanho: paredes, armadilhas em ``U'' e labirintos fazem a Manhattan errar
-    feio, e nesses casos o A* volta a se comportar quase como Dijkstra.
-  \item Mapas sem caminho são o pior caso: a busca precisa visitar toda a região alcançável, qualquer que seja a
-    heurística admissível.
-  \item O A* ponderado é uma troca explícita entre velocidade e qualidade. Aqui, $w = 1{,}5$ já capturou quase todo o
-    ganho de velocidade, e pesos maiores só pioraram o caminho.
-  \item Com custo variável, a rota ótima depende do que se quer minimizar: no mesmo mapa, os perfis mais rápido, mais
-    seguro e equilibrado escolhem rotas diferentes, e cada uma só é a melhor no próprio perfil.
-  \item Custos heterogêneos enfraquecem as heurísticas admissíveis. A Manhattan $\times$ cmin garante o ótimo, mas
-    economiza só cerca de 20\% dos nós; as versões que superestimam são muito mais rápidas e erram a rota na maioria
-    dos mapas.
+  \item Uma heurística admissível garante o ótimo, mas o ganho depende de quanto ela se aproxima do custo real.
+  \item O formato do mapa pesa mais que o tamanho: obstáculos que exigem desvio fazem o A* voltar a parecer Dijkstra.
+  \item O A* ponderado troca qualidade por velocidade, e $w = 1{,}5$ já captura quase todo o ganho.
+  \item Com custo variável, a rota ótima depende do perfil, e as heurísticas admissíveis perdem a maior parte da
+    eficiência.
 \end{itemize}
 
-\textbf{Próximos passos.} Testar o A* no lago escorregadio com replanejamento a cada passo, comparar com o Q-learning
-da atividade anterior no mesmo mapa, e experimentar heurísticas com \emph{landmarks} em mapas com muitos obstáculos.
-No eixo de custo, incluir o tempo no estado para o trânsito mudar durante a viagem, modelar o custo de curva com o
-estado (célula, direção) e calcular a fronteira de Pareto entre os perfis em vez de um ponto por perfil.
+\textbf{Próximos passos.} Testar o A* no lago escorregadio com replanejamento, compará-lo com o Q-learning da atividade
+anterior e incluir tempo e direção no estado para modelar trânsito dinâmico e custo de curva.
 
 \end{document}

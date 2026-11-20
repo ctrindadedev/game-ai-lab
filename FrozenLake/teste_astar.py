@@ -83,6 +83,56 @@ def teste_geradores_de_cenario():
             assert a_star(mapa, heuristica_fn=manhattan_ponderada(w)).custo <= w * otimo
 
 
+def teste_custos():
+    import numpy as np
+
+    from cenarios import mapa_com_caminho
+    from custos import (PERFIS, criar_custo, custo_do_perfil, gerar_camadas,
+                        heuristicas_de_custo, manhattan_escalada)
+
+    for tamanho in (8, 16, 24):
+        for k in range(5):
+            mapa, _ = mapa_com_caminho(tamanho, p_livre=0.85, semente=k)
+            for horario in ("pico", "madrugada"):
+                for clima in ("seco", "chuva"):
+                    cam = gerar_camadas(mapa, semente=k, horario=horario, clima=clima)
+                    assert cam.terreno.shape == (tamanho, tamanho)
+                    # bairros: a maioria das células vizinhas tem o mesmo piso
+                    iguais = np.mean(np.concatenate([
+                        (cam.tipo_terreno[1:] == cam.tipo_terreno[:-1]).ravel(),
+                        (cam.tipo_terreno[:, 1:] == cam.tipo_terreno[:, :-1]).ravel()]))
+                    assert iguais > 0.6
+                    for perfil in PERFIS:
+                        custo = custo_do_perfil(cam, perfil)
+                        assert custo.grade.min() >= 1.0
+                        assert isinstance(custo((0, 0), (0, 1)), float)
+                        otimo = a_star(mapa, custo_fn=custo, heuristica_fn=heuristica_nula)
+                        assert otimo.encontrou
+                        validar_caminho(mapa, otimo, custo_fn=custo)
+                        recompensa, terminou, _ = executar_no_ambiente(mapa, otimo.acoes)
+                        assert terminou and recompensa == 1.0
+                        hs = heuristicas_de_custo(custo)
+                        # admissíveis: mesmo custo de Dijkstra
+                        for nome in ("manhattan", "manhattan × cmin"):
+                            r = a_star(mapa, custo_fn=custo, heuristica_fn=hs[nome])
+                            validar_caminho(mapa, r, custo_fn=custo)
+                            assert math.isclose(r.custo, otimo.custo)
+                        # w·(Manhattan × cmin) nunca passa de w vezes o ótimo
+                        for w in (1.5, 2, 5):
+                            h = manhattan_escalada(w * custo.minimo)
+                            r = a_star(mapa, custo_fn=custo, heuristica_fn=h)
+                            validar_caminho(mapa, r, custo_fn=custo)
+                            assert r.custo <= w * otimo.custo + 1e-9
+    # pesos negativos poderiam gerar passo com custo < 1
+    cam = gerar_camadas(["SF", "FG"], 0)
+    try:
+        criar_custo(cam, w_trafego=-1)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("peso negativo deveria ser recusado")
+
+
 if __name__ == "__main__":
     for nome, teste in list(globals().items()):
         if nome.startswith("teste_") and callable(teste):

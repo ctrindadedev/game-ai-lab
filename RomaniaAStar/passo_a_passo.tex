@@ -40,19 +40,190 @@ reta de $n$ até Bucharest, dada pela tabela do slide.
 
 \section{Dados}
 
-\pendente{tabela com as distâncias em linha reta usadas (h) e as estradas relevantes}
+A tabela~\ref{tab:h} traz a heurística do slide: a distância em linha reta de cada cidade até Bucharest. Ela é
+\emph{admissível}, porque uma linha reta nunca é mais longa que uma estrada entre os mesmos pontos, então $h$ nunca
+superestima o custo real até o objetivo.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Distância em linha reta até Bucharest, $h(n)$, em km.}
+  \label{tab:h}
+  \begin{tabular}{lr@{\hspace{2.5em}}lr@{\hspace{2.5em}}lr@{\hspace{2.5em}}lr}
+    \toprule
+    Cidade & $h$ & Cidade & $h$ & Cidade & $h$ & Cidade & $h$ \\
+    \midrule
+    Arad      & 366 & Eforie   & 161 & Lugoj   & 244 & Rimnicu Vilcea & 193 \\
+    Bucharest &   0 & Fagaras  & 176 & Mehadia & 241 & Sibiu          & 253 \\
+    Craiova   & 160 & Giurgiu  &  77 & Neamt   & 234 & Timisoara      & 329 \\
+    Drobeta   & 242 & Hirsova  & 151 & Oradea  & 380 & Urziceni       &  80 \\
+              &     & Iasi     & 226 & Pitesti & 100 & Vaslui         & 199 \\
+              &     &          &     &         &     & Zerind         & 374 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O mapa tem 23 estradas. A tabela~\ref{tab:estradas} lista só as 11 que aparecem na execução, isto é, as que saem das
+cidades expandidas. As demais (por exemplo, Lugoj--Mehadia ou Urziceni--Vaslui) nunca são consultadas, porque a busca
+termina antes de chegar perto delas.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Estradas consultadas pelo A*, em km (as estradas valem nos dois sentidos).}
+  \label{tab:estradas}
+  \begin{tabular}{lr@{\hspace{3em}}lr}
+    \toprule
+    Estrada & Distância & Estrada & Distância \\
+    \midrule
+    Arad -- Zerind           &  75 & Rimnicu Vilcea -- Craiova & 146 \\
+    Arad -- Sibiu            & 140 & Rimnicu Vilcea -- Pitesti &  97 \\
+    Arad -- Timisoara        & 118 & Pitesti -- Craiova        & 138 \\
+    Sibiu -- Oradea          & 151 & Fagaras -- Bucharest      & 211 \\
+    Sibiu -- Fagaras         &  99 & Pitesti -- Bucharest      & 101 \\
+    Sibiu -- Rimnicu Vilcea  &  80 &                           &     \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Execução}
 
 Convenções: \texttt{OPEN} é a fronteira (nós abertos) e \texttt{CLOSED} são os nós já expandidos.
-A cada iteração, o nó de menor $f$ sai de \texttt{OPEN}; se for Bucharest, a busca termina.
+A cada iteração, o nó de menor $f$ sai de \texttt{OPEN}; se for Bucharest, a busca termina. Se não for, ele vai para
+\texttt{CLOSED} e seus vizinhos são gerados com $g = g(\text{pai}) + \text{distância da estrada}$. Um vizinho que já
+está em \texttt{OPEN} ou em \texttt{CLOSED} com $g$ menor ou igual é ignorado; se o novo $g$ for menor, o registro é
+atualizado (novo $g$ e novo pai). Em \texttt{OPEN}, os nós aparecem em ordem crescente de $f$, com o valor de $f$ entre
+parênteses. Não houve empates em $f$ nesta execução.
 
-\pendente{uma tabela por iteração, com o nó expandido, os filhos gerados (g, h, f, pai) e o
-estado de OPEN e CLOSED}
+\textbf{Início.} $g(\text{Arad}) = 0$ e $h(\text{Arad}) = 366$, então $f(\text{Arad}) = 366$.\\
+\texttt{OPEN} = \{Arad(366)\} \qquad \texttt{CLOSED} = \{\}
+
+\subsection*{Iteração 1: expande Arad ($g = 0$, $f = 366$)}
+
+\begin{tabularx}{\linewidth}{lrrrlX}
+  \toprule
+  Filho & $g$ & $h$ & $f$ & Pai & O que acontece \\
+  \midrule
+  Zerind & 75 & 374 & 449 & Arad & entra em \texttt{OPEN} \\
+  Sibiu & 140 & 253 & 393 & Arad & entra em \texttt{OPEN} \\
+  Timisoara & 118 & 329 & 447 & Arad & entra em \texttt{OPEN} \\
+  \bottomrule
+\end{tabularx}
+
+\texttt{OPEN} = \{Sibiu(393), Timisoara(447), Zerind(449)\}\\
+\texttt{CLOSED} = \{Arad\}
+
+\subsection*{Iteração 2: expande Sibiu ($g = 140$, $f = 393$)}
+
+\begin{tabularx}{\linewidth}{lrrrlX}
+  \toprule
+  Filho & $g$ & $h$ & $f$ & Pai & O que acontece \\
+  \midrule
+  Arad & 280 & 366 & 646 & Sibiu & ignorado: já está em \texttt{CLOSED} com $g = 0$ \\
+  Oradea & 291 & 380 & 671 & Sibiu & entra em \texttt{OPEN} \\
+  Fagaras & 239 & 176 & 415 & Sibiu & entra em \texttt{OPEN} \\
+  Rimnicu Vilcea & 220 & 193 & 413 & Sibiu & entra em \texttt{OPEN} \\
+  \bottomrule
+\end{tabularx}
+
+\texttt{OPEN} = \{Rimnicu Vilcea(413), Fagaras(415), Timisoara(447), Zerind(449), Oradea(671)\}\\
+\texttt{CLOSED} = \{Arad, Sibiu\}
+
+\subsection*{Iteração 3: expande Rimnicu Vilcea ($g = 220$, $f = 413$)}
+
+\begin{tabularx}{\linewidth}{lrrrlX}
+  \toprule
+  Filho & $g$ & $h$ & $f$ & Pai & O que acontece \\
+  \midrule
+  Craiova & 366 & 160 & 526 & Rimnicu Vilcea & entra em \texttt{OPEN} \\
+  Sibiu & 300 & 253 & 553 & Rimnicu Vilcea & ignorado: já está em \texttt{CLOSED} com $g = 140$ \\
+  Pitesti & 317 & 100 & 417 & Rimnicu Vilcea & entra em \texttt{OPEN} \\
+  \bottomrule
+\end{tabularx}
+
+\texttt{OPEN} = \{Fagaras(415), Pitesti(417), Timisoara(447), Zerind(449), Craiova(526), Oradea(671)\}\\
+\texttt{CLOSED} = \{Arad, Sibiu, Rimnicu Vilcea\}
+
+\subsection*{Iteração 4: expande Fagaras ($g = 239$, $f = 415$)}
+
+\begin{tabularx}{\linewidth}{lrrrlX}
+  \toprule
+  Filho & $g$ & $h$ & $f$ & Pai & O que acontece \\
+  \midrule
+  Sibiu & 338 & 253 & 591 & Fagaras & ignorado: já está em \texttt{CLOSED} com $g = 140$ \\
+  Bucharest & 450 & 0 & 450 & Fagaras & entra em \texttt{OPEN} (primeira vez que o objetivo é gerado) \\
+  \bottomrule
+\end{tabularx}
+
+\texttt{OPEN} = \{Pitesti(417), Timisoara(447), Zerind(449), Bucharest(450), Craiova(526), Oradea(671)\}\\
+\texttt{CLOSED} = \{Arad, Sibiu, Rimnicu Vilcea, Fagaras\}
+
+\subsection*{Iteração 5: expande Pitesti ($g = 317$, $f = 417$)}
+
+\begin{tabularx}{\linewidth}{lrrrlX}
+  \toprule
+  Filho & $g$ & $h$ & $f$ & Pai & O que acontece \\
+  \midrule
+  Craiova & 455 & 160 & 615 & Pitesti & ignorado: já está em \texttt{OPEN} com $g = 366$ \\
+  Rimnicu Vilcea & 414 & 193 & 607 & Pitesti & ignorado: já está em \texttt{CLOSED} com $g = 220$ \\
+  Bucharest & 418 & 0 & 418 & Pitesti & atualiza \texttt{OPEN}: $g$ cai de 450 para 418 e o pai passa de Fagaras para Pitesti \\
+  \bottomrule
+\end{tabularx}
+
+\texttt{OPEN} = \{Bucharest(418), Timisoara(447), Zerind(449), Craiova(526), Oradea(671)\}\\
+\texttt{CLOSED} = \{Arad, Sibiu, Rimnicu Vilcea, Fagaras, Pitesti\}
+
+\subsection*{Iteração 6: Bucharest sai de \texttt{OPEN}}
+
+Bucharest é o nó de menor $f$ ($g = 418$, $h = 0$, $f = 418$, pai Pitesti). Como é o objetivo, a busca termina sem
+expandi-lo.\\
+\texttt{OPEN} = \{Timisoara(447), Zerind(449), Craiova(526), Oradea(671)\}\\
+\texttt{CLOSED} = \{Arad, Sibiu, Rimnicu Vilcea, Fagaras, Pitesti\}
+
+\subsection*{Resumo}
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Nó retirado de \texttt{OPEN} em cada iteração.}
+  \label{tab:resumo}
+  \begin{tabular}{clrrrl}
+    \toprule
+    Iteração & Nó & $g$ & $h$ & $f$ & Pai \\
+    \midrule
+    1 & Arad           &   0 & 366 & 366 & --- \\
+    2 & Sibiu          & 140 & 253 & 393 & Arad \\
+    3 & Rimnicu Vilcea & 220 & 193 & 413 & Sibiu \\
+    4 & Fagaras        & 239 & 176 & 415 & Sibiu \\
+    5 & Pitesti        & 317 & 100 & 417 & Rimnicu Vilcea \\
+    6 & Bucharest      & 418 &   0 & 418 & Pitesti \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Foram 5 expansões e 10 cidades alcançadas: as 5 expandidas, Bucharest e as 4 que sobraram em \texttt{OPEN}. O $f$ dos
+nós retirados nunca diminui (366, 393, 413, 415, 417, 418), como se espera quando $h$ é consistente; por isso nenhum
+nó de \texttt{CLOSED} precisou ser reaberto. A execução foi conferida com o script \texttt{astar\_romenia.py}, que
+imprime \texttt{OPEN}, \texttt{CLOSED} e os valores de $g$, $h$ e $f$ a cada iteração.
 
 \section{Resultado}
 
-\pendente{caminho encontrado, custo total e por que a primeira entrada de Bucharest na fronteira
-não é a solução}
+O caminho é reconstruído seguindo os pais a partir de Bucharest:
+\[
+  \text{Arad} \xrightarrow{140} \text{Sibiu} \xrightarrow{80} \text{Rimnicu Vilcea} \xrightarrow{97} \text{Pitesti}
+  \xrightarrow{101} \text{Bucharest},
+\]
+com custo total $140 + 80 + 97 + 101 = \mathbf{418}$~km.
+
+\textbf{Por que a primeira entrada de Bucharest na fronteira não é a solução.} Na iteração 4, a expansão de Fagaras
+coloca Bucharest em \texttt{OPEN} com $g = 450$ (Arad--Sibiu--Fagaras--Bucharest). Parar ali daria um caminho 32~km
+mais longo. O A* não termina quando o objetivo é \emph{gerado}, e sim quando ele é \emph{retirado} de \texttt{OPEN},
+ou seja, quando tem o menor $f$ da fronteira. No fim da iteração 4, Pitesti ainda estava em \texttt{OPEN} com
+$f = 417$. Como $h$ é admissível, esse $f$ é um limite inferior para qualquer caminho até Bucharest que passe por
+Pitesti, e $417 < 450$: ainda podia existir um caminho melhor, e a busca precisava conferir. Ao expandir Pitesti na
+iteração 5, ela encontrou Bucharest com $g = 317 + 101 = 418$ e atualizou o registro (novo $g$ e pai Pitesti).
+
+Na iteração 6, Bucharest sai de \texttt{OPEN} com $f = 418$, e todos os nós que restam têm $f \ge 447$. Como $h$ é
+admissível, nenhum caminho por eles custa menos que 447, então 418 é o custo ótimo.
 
 \end{document}

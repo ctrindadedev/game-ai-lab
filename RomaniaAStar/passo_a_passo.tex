@@ -1,0 +1,58 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{nosep, leftmargin=*}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+% Trechos que ainda faltam escrever.
+\newcommand{\pendente}[1]{\textcolor{red!70!black}{\textbf{[pendente:} #1\textbf{]}}}
+
+\title{\textbf{A* no mapa da Romênia: de Arad a Bucharest}\\[0.3em]
+  \large Execução passo a passo}
+\author{Luisa Ferreira \quad Caio Trindade\\
+  \small Inteligência Artificial para Jogos I --- Aula 26, pathfinding}
+\date{Novembro de 2026}
+
+\begin{document}
+\maketitle
+
+\section{Problema}
+
+O exercício pede para aplicar o A* no grafo do último slide da aula 26 e calcular o caminho de
+\textbf{Arad} até \textbf{Bucharest}. Cada nó $n$ é avaliado por
+\[
+  f(n) = g(n) + h(n),
+\]
+em que $g(n)$ é a distância percorrida pelas estradas desde Arad e $h(n)$ é a distância em linha
+reta de $n$ até Bucharest, dada pela tabela do slide.
+
+\section{Dados}
+
+\pendente{tabela com as distâncias em linha reta usadas (h) e as estradas relevantes}
+
+\section{Execução}
+
+Convenções: \texttt{OPEN} é a fronteira (nós abertos) e \texttt{CLOSED} são os nós já expandidos.
+A cada iteração, o nó de menor $f$ sai de \texttt{OPEN}; se for Bucharest, a busca termina.
+
+\pendente{uma tabela por iteração, com o nó expandido, os filhos gerados (g, h, f, pai) e o
+estado de OPEN e CLOSED}
+
+\section{Resultado}
+
+\pendente{caminho encontrado, custo total e por que a primeira entrada de Bucharest na fronteira
+não é a solução}
+
+\end{document}

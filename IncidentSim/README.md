@@ -7,17 +7,8 @@
 
 ### Sobre o projeto
 
-Proposta de projeto final de [DIM0126 - Inteligência Artificial para Jogos I](../README.md), feito em dupla. **Situação: ideia, aguardando a opinião do professor.** Ainda não há código.
-
+Proposta de projeto final de [DIM0126 - Inteligência Artificial para Jogos I](../README.md)
 A ideia é um agente "de plantão" para uma plataforma de dados simulada. O simulador sorteia falhas, o agente vê só os sintomas e precisa escolher a ação certa para recuperar o sistema com o menor prejuízo. O projeto compara três técnicas da disciplina nesse mesmo ambiente: árvore de comportamento, A* e Q-learning.
-
-### Resumo para o professor
-
-> Professor, queria sua opinião sobre uma ideia de projeto final. É um simulador em Python, no estilo do FrozenLake, de uma plataforma de dados que sofre falhas sorteadas, como uma API fora do ar ou dados sujos chegando. Um agente "de plantão" precisa descobrir a causa só pelos sintomas e escolher a ação certa para recuperar o sistema com o menor prejuízo. A ideia é comparar três abordagens da disciplina: uma árvore de comportamento escrita à mão, o Q-learning e o A\*. O A\* conhece a causa real e serve de referência para a solução ótima.
->
-> Por exemplo: no minuto 3 chega um lote de dados sujos, e o agente só vê que o Silver ficou degradado. A árvore de comportamento reinicia o Silver, o que não resolve, depois põe o lote em quarentena e reprocessa, recuperando no minuto 7. O Q-learning, se tiver aprendido a reconhecer a pista (muitos erros de validação), vai direto para a quarentena e o reprocessamento e recupera no minuto 6. O A\*, que sabe a causa real, mostra que 6 é o melhor tempo possível.
->
-> Como não é um jogo tradicional, queria saber se o senhor acha que se encaixa na proposta da disciplina.
 
 ### O ambiente
 

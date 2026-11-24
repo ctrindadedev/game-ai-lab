@@ -25,4 +25,4 @@ Os projetos nascem das atividades da disciplina **DIM0126 - Inteligência Artifi
 | 5 | [QLearningToyText](./QLearningToyText) | Q-learning nos ambientes Toy Text do Gymnasium (FrozenLake, CliffWalking e Taxi), variando taxa de aprendizado, desconto e exploração |
 | 6 | [RomaniaAStar](./RomaniaAStar) | Execução passo a passo do A* no mapa da Romênia, de Arad a Bucharest, usando a distância em linha reta como heurística |
 | 7 | [FrozenLake](./FrozenLake) | A* no Lago Congelado variando tamanho, posições e buracos do mapa, com custo de rota inspirado no Uber (terreno, segurança e tráfego) e relatório de experimentos |
-| Projeto final | [IncidentSim](./IncidentSim) | Proposta (em análise): agente de plantão numa plataforma de dados simulada, comparando árvore de comportamento, A* e Q-learning na recuperação de incidentes |
+| Projeto final | [IncidentSim](./IncidentSim) | Agente de plantão numa plataforma de dados simulada, comparando árvore de comportamento, A* e Q-learning na recuperação de incidentes |
